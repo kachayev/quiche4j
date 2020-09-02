@@ -64,18 +64,17 @@ public class H3Client {
 		final byte[] connId = Quiche.newConnectionId();
         final Connection conn = Quiche.connect(uri.getHost(), connId, config);
 
-        final byte[] handshakeBuffer = new byte[MAX_DATAGRAM_SIZE];
-        final int handshakeLength = conn.send(handshakeBuffer);
+        final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
+        final int handshakeLength = conn.send(buffer);
 		System.out.println("> handshake size: " + handshakeLength);
 
 		final DatagramPacket handshakePacket = new DatagramPacket(
-			handshakeBuffer, handshakeLength, address, port);
+			buffer, handshakeLength, address, port);
         final DatagramSocket socket = new DatagramSocket(10002);
         socket.setSoTimeout(1000);
 		socket.send(handshakePacket);
 
 		while(!conn.isEstablished() && !conn.isClosed()) {
-			final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
 			DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 			socket.receive(packet);
 			final int recvBytes = packet.getLength();
@@ -96,12 +95,11 @@ public class H3Client {
 
 		System.out.println("> started sending cycle");
 		while(true) {
-            byte[] payload = new byte[MAX_DATAGRAM_SIZE];
-            int payloadLength = conn.send(payload);
+            int payloadLength = conn.send(buffer);
 			if (-1 == payloadLength || 0 == payloadLength) break;
 			System.out.println("> h3.send "+ payloadLength + " bytes");
 			DatagramPacket packet = new DatagramPacket(
-				payload, payloadLength, address, port);
+				buffer, payloadLength, address, port);
 			socket.send(packet);
 		}
         System.out.println("> request succesfully sent");
@@ -110,7 +108,6 @@ public class H3Client {
 		while(!conn.isClosed()) {
             while(reading.get()) {
                 // READING
-                final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     socket.receive(packet);
@@ -148,14 +145,13 @@ public class H3Client {
             }
 
             // WRITING
-            byte[] payload = new byte[MAX_DATAGRAM_SIZE];
-            int payloadLength = conn.send(payload);
+            int payloadLength = conn.send(buffer);
             if (-1 == payloadLength || 0 == payloadLength) {
                 reading.set(true);
                 continue;
             }
             System.out.println("> h3.send "+ payloadLength + " bytes");
-			DatagramPacket packet = new DatagramPacket(payload, payloadLength, address, port);
+			DatagramPacket packet = new DatagramPacket(buffer, payloadLength, address, port);
             socket.send(packet);
         }
 
