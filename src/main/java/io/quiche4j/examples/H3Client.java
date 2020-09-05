@@ -26,6 +26,8 @@ public class H3Client {
 
     public static final int MAX_DATAGRAM_SIZE = 1350;
 
+    public static final String CLIENT_NAME = "quiche4j";
+
     public static void main(String[] args) throws UnknownHostException, IOException {
         if(0 == args.length) {
             System.out.println("Usage: ./h3-client.sh <URL>");
@@ -90,7 +92,7 @@ public class H3Client {
         req.add(new H3Header(":scheme", uri.getScheme()));
         req.add(new H3Header(":authority", uri.getAuthority()));
         req.add(new H3Header(":path", uri.getPath()));
-        req.add(new H3Header("user-agent", "quiche4j"));
+        req.add(new H3Header("user-agent", CLIENT_NAME));
 		h3Conn.sendRequest(req, true);
 
 		System.out.println("> started sending cycle");
@@ -129,7 +131,7 @@ public class H3Client {
                     public void onData(long streamId) {
                         final byte[] body = new byte[MAX_DATAGRAM_SIZE];
                         final int bodyLength = h3Conn.recvBody(streamId, body);
-                        System.out.println("> get body " + bodyLength + " bytes");
+                        System.out.println("< got body " + bodyLength + " bytes for " + streamId);
                         final byte[] buf = Arrays.copyOfRange(body, 0, bodyLength);
                         System.out.println(new String(buf, StandardCharsets.UTF_8));
                     }

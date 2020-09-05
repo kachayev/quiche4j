@@ -2,7 +2,7 @@
 
 Java implementation of the QUIC transport protocol and HTTP/3.
 
-The library provides thin Java API layer on top of JNI calls to [quiche](https://github.com/cloudflare/quiche). Quiche4j provides a low level API for processing QUIC packets and handling connection state. The application is responsible for providing I/O (e.g. sockets handling) as well as timers. The library itself does not make any assumptions on how I/O layer is organized, making it's pluggle both into sycn and async architectures.
+The library provides thin Java API layer on top of JNI calls to [quiche](https://github.com/cloudflare/quiche). `Quiche4j` provides a low level API for processing QUIC packets and handling connection state. The application is responsible for providing I/O (e.g. sockets handling) as well as timers. The library itself does not make any assumptions on how I/O layer is organized, making it's pluggle into different architectures.
 
 The main goal of the JNI bindings is to ensure high-performance:
 * zero-copy data trasfer between runtimes where possible
