@@ -17,6 +17,16 @@ public class Config {
         return this.ptr;
     }
 
+    public final Config loadCertChainFromPemFile(String path) {
+        Native.quiche_config_load_cert_chain_from_pem_file(getPointer(), path);
+        return this;
+    }
+
+    public final Config loadPrivKeyFromPemFile(String path) {
+        Native.quiche_config_load_priv_key_from_pem_file(getPointer(), path);
+        return this;
+    }
+
     public final Config verityPeer(boolean v) {
         Native.quiche_config_verify_peer(getPointer(), v);
         return this;

@@ -3,7 +3,7 @@ extern crate jni;
 use jni::objects::{JClass, JObject, JString, JValue, ReleaseMode};
 use jni::sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray};
 use jni::JNIEnv;
-use quiche::{h3, Config, Connection};
+use quiche::{h3, Config, Connection, Header, StreamIter, Type};
 use std::pin::Pin;
 use std::slice;
 
@@ -16,6 +16,32 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1config_1new(
 ) -> jlong {
     let config = Config::new(version as u32).unwrap();
     Box::into_raw(Box::new(config)) as jlong
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1config_1load_1cert_1chain_1from_1pem_1file(
+    env: JNIEnv,
+    _class: JClass,
+    config_ptr: jlong,
+    path: JString,
+) {
+    let config = unsafe { &mut *(config_ptr as *mut Config) };
+    let path_str: String = env.get_string(path).unwrap().into();
+    config.load_cert_chain_from_pem_file(&path_str).unwrap();
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1config_1load_1priv_1key_1from_1pem_1file(
+    env: JNIEnv,
+    _class: JClass,
+    config_ptr: jlong,
+    path: JString,
+) {
+    let config = unsafe { &mut *(config_ptr as *mut Config) };
+    let path_str: String = env.get_string(path).unwrap().into();
+    config.load_priv_key_from_pem_file(&path_str).unwrap();
 }
 
 #[no_mangle]
@@ -242,6 +268,24 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1config_1enable_1hystart(
 
 #[no_mangle]
 #[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1accept(
+    env: JNIEnv,
+    _class: JClass,
+    scid_java: jbyteArray,
+    odcid_java: jbyteArray,
+    config_ptr: jlong,
+) -> jlong {
+    let mut config = unsafe { &mut *(config_ptr as *mut Config) };
+    let scid: Vec<u8> = env.convert_byte_array(scid_java).unwrap();
+    let odcid: Vec<u8> = env.convert_byte_array(odcid_java).unwrap();
+    // xxx(okachaiev): using None for odcid here but when using retry()
+    // it should be an actual token
+    let conn = quiche::accept(&scid[..], None, &mut config).unwrap();
+    Box::into_raw(Pin::into_inner(conn)) as jlong
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1connect(
     env: JNIEnv,
     _class: JClass,
@@ -253,7 +297,17 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1connect(
     let mut config = unsafe { &mut *(config_ptr as *mut Config) };
     let scid: Vec<u8> = env.convert_byte_array(conn_id).unwrap();
     let conn = quiche::connect(Some(domain.as_mut_str()), &scid, &mut config).unwrap();
-    Box::into_raw(unsafe { Pin::into_inner_unchecked(conn) }) as jlong
+    Box::into_raw(Pin::into_inner(conn)) as jlong
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1version_1is_1supported(
+    _env: JNIEnv,
+    _class: JClass,
+    version: jint,
+) -> jboolean {
+    quiche::version_is_supported(version as u32) as jboolean
 }
 
 #[no_mangle]
@@ -270,7 +324,10 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1recv(
     match conn.recv(&mut buf) {
         Ok(v) => v as i32,
         // xxx(okachaiev): properly handle errors
-        Err(_) => -1 as i32,
+        Err(e) => {
+            println!("[jni] conn.recv error {:?}", e);
+            -1 as i32
+        }
     }
 }
 
@@ -339,6 +396,17 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1is_1established(
 ) -> jboolean {
     let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
     conn.is_established() as jboolean
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1is_1in_1early_1data(
+    _env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+) -> jboolean {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    conn.is_in_early_data() as jboolean
 }
 
 #[no_mangle]
@@ -418,6 +486,61 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1free(
 
 #[no_mangle]
 #[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1shutdown(
+    _env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+    stream_id: jlong,
+    direction: jint,
+    err: jlong,
+) {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    let dir = match direction {
+        0 => quiche::Shutdown::Read,
+        _ => quiche::Shutdown::Write,
+    };
+    conn.stream_shutdown(stream_id as u64, dir, err as u64)
+        .unwrap();
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1readable(
+    _env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+) -> jlong {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    Box::into_raw(Box::new(conn.readable())) as jlong
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1writable(
+    _env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+) -> jlong {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    Box::into_raw(Box::new(conn.writable())) as jlong
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1stream_1iter_1next(
+    _env: JNIEnv,
+    _class: JClass,
+    stream_iter_ptr: jlong,
+) -> jlong {
+    let stream_iter = unsafe { &mut *(stream_iter_ptr as *mut StreamIter) };
+    match stream_iter.next() {
+        Some(stream_id) => stream_id as jlong,
+        None => -1 as jlong,
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1config_1new(
     _env: JNIEnv,
     _class: JClass,
@@ -482,6 +605,46 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1request(
     let mut conn = unsafe { &mut *(conn_ptr as *mut Connection) };
     let req = headers_from_java(&env, headers).unwrap();
     h3_conn.send_request(&mut conn, &req, true).unwrap();
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1response(
+    env: JNIEnv,
+    _class: JClass,
+    h3_ptr: jlong,
+    conn_ptr: jlong,
+    stream_id: jlong,
+    headers: jobjectArray,
+    fin: jboolean,
+) -> jint {
+    let h3_conn = unsafe { &mut *(h3_ptr as *mut h3::Connection) };
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    let req = headers_from_java(&env, headers).unwrap();
+    match h3_conn.send_response(conn, stream_id as u64, &req, fin != 0) {
+        Ok(_) => 0 as jint,
+        Err(h3::Error::StreamBlocked) => -1 as jint,
+        Err(e) => panic!(e),
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1body(
+    env: JNIEnv,
+    _class: JClass,
+    h3_ptr: jlong,
+    conn_ptr: jlong,
+    stream_id: jlong,
+    java_body: jbyteArray,
+    fin: jboolean,
+) -> jlong {
+    let h3_conn = unsafe { &mut *(h3_ptr as *mut h3::Connection) };
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    let body: Vec<u8> = env.convert_byte_array(java_body).unwrap();
+    h3_conn
+        .send_body(conn, stream_id as u64, &body[..], fin != 0)
+        .unwrap() as jlong
 }
 
 fn call_on_header(
@@ -586,8 +749,80 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1recv_1body(
         Ok(v) => v as i32,
         Err(e) => {
             // xxx(okachaiev): better errors processing here
-            println!("recv body error {:?}", e);
+            println!("[jni] recv body error {:?}", e);
             0 as i32
         }
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1header_1from_1slice(
+    env: JNIEnv,
+    _class: JClass,
+    java_buf: jbyteArray,
+    dcid_len: jint,
+    holder: jobject,
+) {
+    let mut buf: Vec<u8> = env.convert_byte_array(java_buf).unwrap();
+    let hdr = Header::from_slice(&mut buf, dcid_len as usize).unwrap();
+    let ty_java = match hdr.ty {
+        Type::Initial => 1,
+        Type::Retry => 2,
+        Type::Handshake => 3,
+        Type::ZeroRTT => 4,
+        Type::Short => 5,
+        Type::VersionNegotiation => 6,
+    };
+    env.call_method(
+        holder,
+        "setPacketType",
+        "(I)V",
+        &[JValue::Int(ty_java as jint)],
+    )
+    .unwrap();
+    env.call_method(
+        holder,
+        "setVersion",
+        "(I)V",
+        &[JValue::Int(hdr.version as jint)],
+    )
+    .unwrap();
+    env.call_method(
+        holder,
+        "setDcid",
+        "([B)V",
+        &[env.byte_array_from_slice(&hdr.dcid).unwrap().into()],
+    )
+    .unwrap();
+    env.call_method(
+        holder,
+        "setScid",
+        "([B)V",
+        &[env.byte_array_from_slice(&hdr.scid).unwrap().into()],
+    )
+    .unwrap();
+    match hdr.token {
+        Some(token) => {
+            env.call_method(
+                holder,
+                "setToken",
+                "([B)V",
+                &[env.byte_array_from_slice(&token).unwrap().into()],
+            )
+            .unwrap();
+        }
+        None => {}
+    }
+    match hdr.versions {
+        Some(versions) => {
+            let versions_java = env.new_int_array(versions.len() as i32).unwrap();
+            // xxx(okachaiev): fix the problem
+            // env.set_int_array_region(versions_java, 0, &versions[..])
+            //    .unwrap();
+            env.call_method(holder, "setVersions", "([I)V", &[versions_java.into()])
+                .unwrap();
+        }
+        None => {}
     }
 }

@@ -6,6 +6,10 @@ public final class Native {
 	
 	public final static native long quiche_config_new(int version);
 
+	public final static native void quiche_config_load_cert_chain_from_pem_file(long config_prt, String path);
+
+	public final static native void quiche_config_load_priv_key_from_pem_file(long config_ptr, String path);
+
 	public final static native void quiche_config_verify_peer(long config_ptr, boolean v);
 
 	public final static native void quiche_config_grease(long config_ptr, boolean v);
@@ -46,7 +50,11 @@ public final class Native {
 
 	// CONNECTION
 
+	public final static native long quiche_accept(byte[] scid, byte[] odcid, long config_ptr);
+
 	public final static native long quiche_connect(String server_name, byte[] scid, long config_ptr);
+
+	public final static native boolean quiche_version_is_supported(int version);
 
 	public final static native int quiche_conn_recv(long conn_ptr, byte[] buf);
 
@@ -58,11 +66,25 @@ public final class Native {
 
 	public final static native boolean quiche_conn_is_established(long conn_ptr);
 
+	public final static native boolean quiche_conn_is_in_early_data(long conn_ptr);
+
 	public final static native boolean quiche_conn_is_closed(long conn_ptr);
 
 	public final static native void quiche_conn_stats(long conn_ptr, Stats holder);
 
 	public final static native void quiche_conn_free(long conn_ptr);
+
+	// STREAMS
+
+	public final static native void quiche_conn_stream_shutdown(long conn_ptr, long stream_id, int direction, long err);
+
+	public final static native long quiche_conn_readable(long conn_ptr);
+
+	public final static native long quiche_conn_writable(long conn_ptr);
+
+	public final static native long quiche_stream_iter_next(long stream_iter_ptr);
+
+	// public final static native void quiche_stream_iter_free(long stream_iter_ptr);
 
 	// HTTP3
 
@@ -76,7 +98,15 @@ public final class Native {
 
 	public final static native int quiche_h3_recv_body(long h3_conn_ptr, long conn_ptr, long stream_id, byte[] buf);
 
+	public final static native int quiche_h3_send_response(long h3_conn_ptr, long conn_ptr, long stream_id, Object[] headers, boolean fin);
+
+	public final static native long quiche_h3_send_body(long h3_conn_ptr, long conn_ptr, long stream_id, byte[] body, boolean fin);
+
 	public final static native long quiche_h3_conn_poll(long h3_conn_ptr, long conn_ptr, H3PollEvent handler);
+
+	// PACKET
+
+	public final static native void quiche_header_from_slice(byte[] buf, int dcid_len, Header holder);
 
 	static {
 		System.loadLibrary("quiche_jni");

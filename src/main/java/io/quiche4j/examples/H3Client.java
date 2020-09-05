@@ -19,7 +19,7 @@ import io.quiche4j.Connection;
 import io.quiche4j.H3Config;
 import io.quiche4j.H3Connection;
 import io.quiche4j.H3PollEvent;
-import io.quiche4j.Header;
+import io.quiche4j.H3Header;
 import io.quiche4j.Quiche;
 
 public class H3Client {
@@ -71,7 +71,7 @@ public class H3Client {
 		final DatagramPacket handshakePacket = new DatagramPacket(
 			buffer, handshakeLength, address, port);
         final DatagramSocket socket = new DatagramSocket(10002);
-        socket.setSoTimeout(1000);
+        socket.setSoTimeout(2_000);
 		socket.send(handshakePacket);
 
 		while(!conn.isEstablished() && !conn.isClosed()) {
@@ -85,12 +85,12 @@ public class H3Client {
 
         final H3Config h3Config = H3Config.newConfig();
 		final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
-        List<Header> req = new ArrayList<Header>();
-        req.add(new Header(":method", "GET"));
-        req.add(new Header(":scheme", uri.getScheme()));
-        req.add(new Header(":authority", uri.getAuthority()));
-        req.add(new Header(":path", uri.getPath()));
-        req.add(new Header("user-agent", "quiche4j"));
+        List<H3Header> req = new ArrayList<H3Header>();
+        req.add(new H3Header(":method", "GET"));
+        req.add(new H3Header(":scheme", uri.getScheme()));
+        req.add(new H3Header(":authority", uri.getAuthority()));
+        req.add(new H3Header(":path", uri.getPath()));
+        req.add(new H3Header("user-agent", "quiche4j"));
 		h3Conn.sendRequest(req, true);
 
 		System.out.println("> started sending cycle");
