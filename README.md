@@ -34,14 +34,14 @@ $ ./h3-server.sh
 
 ## TODO
 
-- [] Cleanup pointers (finalizers)
-- [] Version negotiation, retry, connection token validation
-- [] Full streams API bindings
-- [] Errors handling (covert between Rust's `Error::*` and return codes and/or exceptions when necessary)
-- [] Find a good way to plug custom timers
-- [] Better build script to provide linking for different platforms, optimized Rust build instead of debug
-- [] Organize examples code
-- [] Documentation (like... a lot)
+- [ ] Cleanup pointers (finalizers)
+- [ ] Version negotiation, retry, connection token validation
+- [ ] Full streams API bindings
+- [ ] Errors handling (covert between Rust's `Error::*` and return codes and/or exceptions when necessary)
+- [ ] Find a good way to plug custom timers
+- [ ] Better build script to provide linking for different platforms, optimized Rust build instead of debug
+- [ ] Organize examples code
+- [ ] Documentation (like... a lot)
 
 ## Copyright
 
