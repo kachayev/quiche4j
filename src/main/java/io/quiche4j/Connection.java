@@ -55,10 +55,26 @@ public class Connection {
         return stats;
     }
 
+    public int streamRecv(long streamId, byte[] buf) {
+        return Native.quiche_conn_stream_recv(getPointer(), streamId, buf);
+    }
+
+    public int streamSend(long streamId, byte[] buf, boolean fin) {
+        return Native.quiche_conn_stream_send(getPointer(), streamId, buf, fin);
+    }
+
 	public void streamShutdown(long streamId, Shutdown direction, long err) {
         Native.quiche_conn_stream_shutdown(getPointer(), streamId, direction.value(), err);
     }
-    
+
+    public int streamCapacity(long streamId) {
+        return Native.quiche_conn_stream_capacity(getPointer(), streamId);
+    }
+
+    public boolean streamFinished(long streamId) {
+        return Native.quiche_conn_stream_finished(getPointer(), streamId);
+    }
+
     public final static class StreamIter implements Iterator<Long>, Iterable<Long> {
 
         private final long ptr;

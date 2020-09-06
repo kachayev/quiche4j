@@ -80,7 +80,9 @@ public class H3Client {
 			DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 			socket.receive(packet);
 			final int recvBytes = packet.getLength();
-			System.out.println("> socket.recieve " + recvBytes + " bytes");
+            System.out.println("> socket.recieve " + recvBytes + " bytes");
+            // xxx(okachaiev): if we extend `recv` API to with optional buf len,
+            // we could avoid Arrays.copy here
 			final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
 			System.out.println("> conn.recv " + read + " bytes");
 		}

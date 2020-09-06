@@ -105,7 +105,33 @@ while(true) {
 
 ### Streams Data
 
-TBD
+After some back and forth, the connection will complete its handshake and will be ready for sending or receiving application data.
+
+Data can be sent on a stream by using the `streamSend` method:
+
+```java
+if(conn.isEstablished()) {
+    // handshake completed, send some data on stream 0
+    conn.streamSend(0, "hello".getBytes(), true);
+}
+```
+
+The application can check whether there are any readable streams by using the connection's `readable` method, which returns an iterator over all the streams that have outstanding data to read.
+
+The `streamRecv` method can then be used to retrieve the application data from the readable stream:
+
+```java
+if(conn.isEstablished()) {
+    final byte[] buf = new byte[1350]; 
+    for(long streamId: conn.readable()) {
+        // stream <streamId> is readable, read until there's no more data
+        while(true) {
+            final int len = conn.streamRecv(streamId, buf);
+            if(len <= 0) break;
+        }
+    }
+}
+```
 
 ## HTTP/3
 

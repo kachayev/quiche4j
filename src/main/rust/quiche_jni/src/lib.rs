@@ -486,6 +486,59 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1free(
 
 #[no_mangle]
 #[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1recv(
+    env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+    stream_id: jlong,
+    java_buf: jbyteArray,
+) -> jint {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    // internally executes GetByteArrayRegion
+    let mut buf = env.convert_byte_array(java_buf).unwrap();
+    match conn.stream_recv(stream_id as u64, &mut buf) {
+        // xxx(okachaiev): find a way to convey this information
+        Ok((out_len, _out_fin)) => out_len as i32,
+        // xxx(okachaiev): properly handle errors
+        Err(e) => {
+            println!("[jni] conn.stream_recv error {:?}", e);
+            -1 as i32
+        }
+    }
+}
+
+// xxx(okachaiev): impelemnt "send with priority"
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1send(
+    env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+    stream_id: jlong,
+    java_buf: jbyteArray,
+    fin: jboolean,
+) -> jint {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    let buf_len = env.get_array_length(java_buf).unwrap() as usize;
+    let (ptr, _is_copy) = env.get_byte_array_elements(java_buf).unwrap();
+    let buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(ptr as *mut u8, buf_len) };
+    let sent_len = conn.stream_send(stream_id as u64, buf, fin != 0);
+    env.release_byte_array_elements(
+        java_buf,
+        unsafe { ptr.as_mut().unwrap() },
+        ReleaseMode::CopyBack,
+    )
+    .unwrap();
+    match sent_len {
+        Ok(v) => v as i32,
+        // xxx(okachaiev): replace magical constant
+        Err(quiche::Error::Done) => -1 as jint,
+        Err(e) => panic!(e),
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1shutdown(
     _env: JNIEnv,
     _class: JClass,
@@ -501,6 +554,36 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1shutdown(
     };
     conn.stream_shutdown(stream_id as u64, dir, err as u64)
         .unwrap();
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1capacity(
+    env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+    stream_id: jlong,
+) -> jint {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    match conn.stream_capacity(stream_id as u64) {
+        Ok(v) => v as jint,
+        Err(e) => {
+            println!("[jni] stream capacity error {:?}", e);
+            0 as jint
+        }
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1finished(
+    env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+    stream_id: jlong,
+) -> jboolean {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    conn.stream_finished(stream_id as u64) as jboolean
 }
 
 #[no_mangle]
