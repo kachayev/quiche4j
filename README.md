@@ -10,19 +10,19 @@ The main goal of the JNI bindings is to ensure high-performance and flexibility 
 
 Build the package:
 
-```shell
+```bash
 $ mvn package
 ```
 
 Run HTTP3 client example:
 
-```sh
+```bash
 $ ./h3-client.sh http://quic.tech:8443
 ```
 
 Run HTTP3 server example:
 
-```
+```bash
 $ ./h3-server.sh
 ```
 
