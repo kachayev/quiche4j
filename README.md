@@ -111,7 +111,7 @@ The library provides a high level API for sending and receiving HTTP/3 requests 
 
 HTTP/3 connections require a QUIC transport-layer connection, see "Connection" for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
 
-```
+```java
 final Config config = Config.newConfig(Quiche.PROTOCOL_VERSION);
 config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
 ```
