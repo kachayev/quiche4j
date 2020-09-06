@@ -1,7 +1,7 @@
 package io.quiche4j;
 
 // xxx(okachaiev): move to "Packet" as a subclass
-public final class Header {
+public final class PacketHeader {
 
     private PacketType packetType;
     private int version;
@@ -13,7 +13,7 @@ public final class Header {
     private int[] versions;
     private boolean keyPhase;
 
-    private Header() {
+    private PacketHeader() {
         this.packetNum = 0L;
         this.packetNumLen = 0;
         this.keyPhase = false;
@@ -117,8 +117,8 @@ public final class Header {
         return this.keyPhase;
     }
 
-    public final static Header parse(byte[] buf, int dcidLength) {
-        final Header hdr = new Header();
+    public final static PacketHeader parse(byte[] buf, int dcidLength) {
+        final PacketHeader hdr = new PacketHeader();
         Native.quiche_header_from_slice(buf, dcidLength, hdr);
         return hdr;
     }

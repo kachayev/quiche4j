@@ -172,6 +172,7 @@ final Long streamId = h3Conn.poll(new H3PollEvent() {
     }
 
     public void onFinished(long streamId) {
+        // done with this stream
         conn.close(true, 0x00, "Bye! :)".getBytes()));
     }
 });

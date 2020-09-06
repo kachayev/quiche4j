@@ -1,6 +1,6 @@
 package io.quiche4j;
 
-public class H3Header {
+public class H3Header implements Native.Header {
     
     private final String name;
     private final String value;

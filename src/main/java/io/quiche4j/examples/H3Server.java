@@ -17,7 +17,7 @@ import io.quiche4j.H3Config;
 import io.quiche4j.H3Connection;
 import io.quiche4j.H3Header;
 import io.quiche4j.H3PollEvent;
-import io.quiche4j.Header;
+import io.quiche4j.PacketHeader;
 import io.quiche4j.PacketType;
 import io.quiche4j.Quiche;
 import io.quiche4j.Utils;
@@ -126,9 +126,9 @@ public class H3Server {
                     System.out.println("> socket.recv " + len + " bytes");
 
                     // PARSE QUIC HEADER
-                    Header hdr;
+                    PacketHeader hdr;
                     try {
-                        hdr = Header.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
+                        hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
                         System.out.println("> packet " + hdr);
                     } catch (Exception e) {
                         System.out.println("> failed to parse headers " + e);

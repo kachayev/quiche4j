@@ -2,8 +2,19 @@ package io.quiche4j;
 
 public final class Native {
 
+	public static interface H3PollEvent {
+		void onHeader(long streamId, String name, String value);
+		void onData(long streamId);
+		void onFinished(long streamId);
+	}
+
+	public static interface Header {
+		String getName();
+		String getValue();
+	}
+
 	// CONFIG
-	
+
 	public final static native long quiche_config_new(int version);
 
 	public final static native void quiche_config_load_cert_chain_from_pem_file(long config_prt, String path);
@@ -106,7 +117,7 @@ public final class Native {
 
 	// PACKET
 
-	public final static native void quiche_header_from_slice(byte[] buf, int dcid_len, Header holder);
+	public final static native void quiche_header_from_slice(byte[] buf, int dcid_len, PacketHeader holder);
 
 	static {
 		System.loadLibrary("quiche_jni");
