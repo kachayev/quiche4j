@@ -142,14 +142,14 @@ The library provides a high level API for sending and receiving HTTP/3 requests 
 HTTP/3 connections require a QUIC transport-layer connection, see "Connection" for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
 
 ```java
-final Config config = Config.newConfig(Quiche.PROTOCOL_VERSION);
+final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
 config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
 ```
 
 The QUIC handshake is driven by sending and receiving QUIC packets. Once the handshake has completed, the first step in establishing an HTTP/3 connection is creating its configuration object:
 
 ```java
-final H3Config h3Config = H3Config.newConfig();
+final H3Config h3Config = H3Config.newInstance();
 ```
 
 HTTP/3 client and server connections are both created using the `H3Connection.withTtransport` function:
@@ -224,14 +224,12 @@ Have a look at the `src/main/java/io/quiche4j/examples/` folder for more complet
 
 ## TODO
 
-- [ ] Cleanup pointers (finalizers)
 - [ ] Version negotiation, retry, connection token validation
-- [ ] Full streams API bindings
 - [ ] Errors handling (covert between Rust's `Error::*` and return codes and/or exceptions when necessary)
-- [ ] Find a good way to plug custom timers
 - [ ] Better build script to provide linking for different platforms, optimized Rust build instead of debug
 - [ ] Organize examples code
 - [ ] Documentation (like... a lot)
+- [ ] Find a good way to plug custom timers
 
 ## Copyright
 

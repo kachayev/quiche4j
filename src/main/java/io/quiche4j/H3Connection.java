@@ -9,21 +9,25 @@ public final class H3Connection {
 
     private final long ptr;
     private final Connection conn;
-    private final H3Config config;
 
     public final static H3Connection withTransport(Connection conn, H3Config config) {
         final long ptr = Native.quiche_h3_conn_new_with_transport(conn.getPointer(), config.getPointer());
-        return new H3Connection(ptr, conn, config);
+        final H3Connection h3 = new H3Connection(ptr, conn);
+        Native.CLEANER.register(h3, () -> h3.free());
+        return h3;
     }
 
-    protected H3Connection(long ptr, Connection conn, H3Config config) {
+    private H3Connection(long ptr, Connection conn) {
         this.ptr = ptr;
         this.conn = conn;
-        this.config = config;
     }
 
-    protected long getPointer() {
+    protected final long getPointer() {
         return this.ptr;
+    }
+
+    private final void free() {
+        Native.quiche_h3_conn_free(getPointer());
     }
 
     public final void sendRequest(List<H3Header> headers, boolean fin) {

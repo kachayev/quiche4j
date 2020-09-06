@@ -88,7 +88,7 @@ public class H3Server {
         final DatagramSocket socket = new DatagramSocket(4433);
         socket.setSoTimeout(1_000);
 
-        final Config config = Config.newConfig(Quiche.PROTOCOL_VERSION);
+        final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
         config.verityPeer(false);
         config.loadCertChainFromPemFile("src/main/resources/examples/cert.crt");
         config.loadPrivKeyFromPemFile("src/main/resources/examples/cert.key");
@@ -104,7 +104,7 @@ public class H3Server {
         config.setDisableActiveMigration(true);
         config.enableEarlyData();
 
-        final H3Config h3Config = H3Config.newConfig();
+        final H3Config h3Config = H3Config.newInstance();
         final byte[] connIdSeed = Quiche.newConnectionIdSeed();
         final HashMap<String, Client> clients = new HashMap<>();
 

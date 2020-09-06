@@ -48,7 +48,7 @@ public class H3Client {
         final int port = uri.getPort();
         final InetAddress address = InetAddress.getByName(uri.getHost());
 
-        final Config config = Config.newConfig(Quiche.PROTOCOL_VERSION);
+        final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
         // CAUTION: this should not be set to `false` in production
         config.verityPeer(false);
 
@@ -87,7 +87,7 @@ public class H3Client {
 			System.out.println("> conn.recv " + read + " bytes");
 		}
 
-        final H3Config h3Config = H3Config.newConfig();
+        final H3Config h3Config = H3Config.newInstance();
 		final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
         List<H3Header> req = new ArrayList<H3Header>();
         req.add(new H3Header(":method", "GET"));

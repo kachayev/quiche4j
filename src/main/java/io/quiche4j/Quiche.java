@@ -76,12 +76,12 @@ public final class Quiche {
 
     public static final Connection accept(byte[] scid, byte[] odcid, Config config) {
         final long ptr = Native.quiche_accept(scid, odcid, config.getPointer());
-        return new Connection(ptr);
+        return Connection.newInstance(ptr);
     }
 
     public static final Connection connect(String domain, byte[] connId, Config config) {
         final long ptr = Native.quiche_connect(domain, connId, config.getPointer());
-        return new Connection(ptr);
+        return Connection.newInstance(ptr);
     }
 
 }

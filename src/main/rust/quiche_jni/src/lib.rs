@@ -559,7 +559,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1shutdown(
 #[no_mangle]
 #[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1capacity(
-    env: JNIEnv,
+    _env: JNIEnv,
     _class: JClass,
     conn_ptr: jlong,
     stream_id: jlong,
@@ -577,7 +577,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1capacity(
 #[no_mangle]
 #[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1finished(
-    env: JNIEnv,
+    _env: JNIEnv,
     _class: JClass,
     conn_ptr: jlong,
     stream_id: jlong,
@@ -644,6 +644,16 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1new_1with_1tran
     let h3_config = unsafe { &mut *(h3_config_ptr as *mut h3::Config) };
     let h3_conn = h3::Connection::with_transport(&mut conn, &h3_config).unwrap();
     Box::into_raw(Box::new(h3_conn)) as jlong
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1free(
+    _env: JNIEnv,
+    _class: JClass,
+    h3_conn_ptr: jlong,
+) {
+    unsafe { Box::from_raw(h3_conn_ptr as *mut h3::Connection) };
 }
 
 fn convert_to_string<'e, V>(env: &JNIEnv<'e>, val: V) -> Result<String, jni::errors::Error>

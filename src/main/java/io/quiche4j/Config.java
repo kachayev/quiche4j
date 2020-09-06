@@ -4,12 +4,14 @@ public class Config {
 
     private final long ptr;
 
-    public static final Config newConfig(int version) {
+    public static final Config newInstance(int version) {
         final long ptr = Native.quiche_config_new(version);
-        return new Config(ptr);
+        final Config config = new Config(ptr);
+        Native.CLEANER.register(config, () -> config.free());
+        return config;
     }
 
-    protected Config(long ptr) {
+    private Config(long ptr) {
         this.ptr = ptr;
     }
 
@@ -117,6 +119,10 @@ public class Config {
     public final Config enableHystart(boolean v) {
         Native.quiche_config_enable_hystart(getPointer(), v);
         return this;
+    }
+
+    private final void free() {
+        
     }
 
 }

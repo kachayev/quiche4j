@@ -4,12 +4,14 @@ public class H3Config {
 
     private final long ptr;
 
-    public static final H3Config newConfig() {
+    public static final H3Config newInstance() {
         final long ptr = Native.quiche_h3_config_new();
-        return new H3Config(ptr);
+        final H3Config config = new H3Config(ptr);
+        Native.CLEANER.register(config, () -> config.free());
+        return config;
     }
 
-    protected H3Config(long ptr) {
+    private H3Config(long ptr) {
         this.ptr = ptr;
     }
 
@@ -17,4 +19,7 @@ public class H3Config {
         return this.ptr;
     }
 
+    protected final void free() {
+        Native.quiche_h3_config_free(getPointer());
+    }
 }

@@ -1,6 +1,10 @@
 package io.quiche4j;
 
+import java.lang.ref.Cleaner;
+
 public final class Native {
+
+	protected final static Cleaner CLEANER = Cleaner.create(); 
 
 	public static interface H3PollEvent {
 		void onHeader(long streamId, String name, String value);
@@ -103,7 +107,7 @@ public final class Native {
 
 	public final static native long quiche_stream_iter_next(long stream_iter_ptr);
 
-	// public final static native void quiche_stream_iter_free(long stream_iter_ptr);
+	public final static native void quiche_stream_iter_free(long stream_iter_ptr);
 
 	// HTTP3
 
@@ -112,6 +116,8 @@ public final class Native {
 	public final static native void quiche_h3_config_free(long h3_config_ptr);
 
 	public final static native long quiche_h3_conn_new_with_transport(long conn_ptr, long h3_config_ptr);
+
+	public final static native void quiche_h3_conn_free(long conn_ptr);
 
 	public final static native long quiche_h3_send_request(long h3_conn_ptr, long conn_ptr, Object[] headers, boolean fin);
 

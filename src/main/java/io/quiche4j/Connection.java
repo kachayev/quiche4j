@@ -1,6 +1,5 @@
 package io.quiche4j;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 
 import io.quiche4j.Quiche.Shutdown;
@@ -9,12 +8,22 @@ public class Connection {
 
     private final long ptr;
 
-    protected Connection(long ptr) {
+    private Connection(long ptr) {
         this.ptr = ptr;
     }
 
-    protected final long getPointer() {
+    public final long getPointer() {
         return this.ptr;
+    }
+
+    public final static Connection newInstance(long ptr) {
+        final Connection conn = new Connection(ptr);
+        Native.CLEANER.register(conn, () -> conn.free());
+        return conn;
+    }
+
+    private final void free() {
+        Native.quiche_conn_free(getPointer());
     }
 
     public final int send(byte[] buf) {
@@ -81,6 +90,12 @@ public class Connection {
         private long nextId;
         private boolean hasNext;
 
+        private final static StreamIter fromPointer(long ptr) {
+            final StreamIter iter = new StreamIter(ptr);
+            Native.CLEANER.register(iter, () -> iter.free());
+            return iter;
+        }
+
         private StreamIter(long ptr) {
             this.ptr = ptr;
             this.nextId = -1;
@@ -113,14 +128,22 @@ public class Connection {
         public final Iterator<Long> iterator() {
             return this;
         }
+
+        private final long getPointer() {
+            return this.ptr;
+        }
+
+        private final void free() {
+            Native.quiche_stream_iter_free(getPointer());
+        }
     } 
 
     public StreamIter readable() {
-        return new StreamIter(Native.quiche_conn_readable(getPointer()));
+        return StreamIter.fromPointer(Native.quiche_conn_readable(getPointer()));
     }
 
     public StreamIter writable() {
-        return new StreamIter(Native.quiche_conn_writable(getPointer()));
+        return StreamIter.fromPointer(Native.quiche_conn_writable(getPointer()));
     }
 
 }
