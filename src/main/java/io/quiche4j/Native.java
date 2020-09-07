@@ -71,6 +71,8 @@ public final class Native {
 
 	public final static native boolean quiche_version_is_supported(int version);
 
+	public final static native int quiche_negotiate_version(byte[] scid, byte[] dcid, byte[] buf);
+
 	public final static native int quiche_conn_recv(long conn_ptr, byte[] buf);
 
 	public final static native int quiche_conn_send(long conn_ptr, byte[] buf);

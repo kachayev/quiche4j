@@ -224,7 +224,7 @@ Have a look at the `src/main/java/io/quiche4j/examples/` folder for more complet
 
 ## TODO
 
-- [ ] Version negotiation, retry, connection token validation
+- [ ] Retry, connection token validation
 - [ ] Better build script to provide linking for different platforms, optimized Rust build instead of debug
 - [ ] Organize examples code
 - [ ] Documentation (like... a lot)

@@ -139,7 +139,7 @@ public class H3Server {
                         hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
                         System.out.println("> packet " + hdr);
                     } catch (Exception e) {
-                        System.out.println("> failed to parse headers " + e);
+                        System.out.println("! failed to parse headers " + e);
                         continue;
                     }
 
@@ -150,7 +150,7 @@ public class H3Server {
                     if(null == client) {
                         // CREATE CLIENT IF MISSING
                         if(PacketType.INITIAL != hdr.getPacketType()) {
-                            System.out.println("> wrong packet type");
+                            System.out.println("! wrong packet type");
                             continue;
                         }
 
@@ -158,8 +158,18 @@ public class H3Server {
                         if(!Quiche.versionIsSupported(hdr.getVersion())) {
                             System.out.println("> version negotiation");
 
-                            // TBD
-
+                            int negLength = 0;
+                            try {
+                                negLength = Quiche.negotiateVersion(
+                                    hdr.getSourceConnectionId(), hdr.getDestinationConnectionId(), out);
+                            } catch (Quiche.Error e) {
+                                System.out.println("! failed to negotiate version " + e.getErrorCode());
+                                System.exit(1);
+                                return;
+                            }
+                            final DatagramPacket negPacket =
+                                new DatagramPacket(out, negLength, packet.getAddress(), packet.getPort());
+                            socket.send(negPacket);
                             continue;
                         }
 

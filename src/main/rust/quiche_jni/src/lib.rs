@@ -332,6 +332,33 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1version_1is_1supported(
 
 #[no_mangle]
 #[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1negotiate_1version(
+    env: JNIEnv,
+    _class: JClass,
+    java_scid: jbyteArray,
+    java_dcid: jbyteArray,
+    java_buf: jbyteArray,
+) -> jint {
+    let scid = env.convert_byte_array(java_scid).unwrap();
+    let dcid = env.convert_byte_array(java_dcid).unwrap();
+    let buf_len = env.get_array_length(java_buf).unwrap() as usize;
+    let (ptr, _is_copy) = env.get_byte_array_elements(java_buf).unwrap();
+    let buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(ptr as *mut u8, buf_len) };
+    let len = quiche::negotiate_version(&scid[..], &dcid[..], buf);
+    env.release_byte_array_elements(
+        java_buf,
+        unsafe { ptr.as_mut().unwrap() },
+        ReleaseMode::CopyBack,
+    )
+    .unwrap();
+    match len {
+        Ok(v) => v as jint,
+        Err(e) => e as jint,
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1recv(
     env: JNIEnv,
     _class: JClass,

@@ -91,6 +91,13 @@ public final class Quiche {
         return Native.quiche_version_is_supported(version);
     }
 
+    public static final int negotiateVersion(
+            byte[] sourceConnectionid, byte[] destinationConnectionId, byte[] buf) throws Error {
+        final int len = Native.quiche_negotiate_version(sourceConnectionid, destinationConnectionId, buf);
+        if(len < 0) throw new Error(len);
+        return len;
+    }
+
     public static final Connection accept(byte[] scid, byte[] odcid, Config config) {
         final long ptr = Native.quiche_accept(scid, odcid, config.getPointer());
         return Connection.newInstance(ptr);
