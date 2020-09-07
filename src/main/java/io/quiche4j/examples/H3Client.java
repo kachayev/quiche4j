@@ -200,7 +200,7 @@ public class H3Client {
                 System.out.println("! conn.send failed " + e.getErrorCode());
                 reading.set(true);
                 continue;
-        }
+            }
         }
 
         System.out.println("> conn is closed");
