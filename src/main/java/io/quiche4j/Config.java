@@ -19,6 +19,10 @@ public class Config {
         return this.ptr;
     }
 
+    private final void free() {
+        Native.quiche_config_free(getPointer());
+    }
+
     public final Config loadCertChainFromPemFile(String path) {
         Native.quiche_config_load_cert_chain_from_pem_file(getPointer(), path);
         return this;
@@ -49,9 +53,9 @@ public class Config {
         return this;
     }
 
-    public final Config setApplicationProtos(byte[] protos) {
-        // xxx(okachaiev): if the result != 0, throw the exception
-        Native.quiche_config_set_application_protos(getPointer(), protos);
+    public final Config setApplicationProtos(byte[] protos) throws Quiche.Error {
+        final int resultCode = Native.quiche_config_set_application_protos(getPointer(), protos);
+        if(Quiche.SUCCESS_CODE != resultCode) throw new Quiche.Error(resultCode);
         return this;
     }
 
@@ -110,19 +114,15 @@ public class Config {
         return this;
     }
 
-    public final Config setCcAlgorithmName(String name) {
-        // xxx(okachaiev): if the result != 0, throw the exception
-        Native.quiche_config_set_cc_algorithm_name(getPointer(), name);
+    public final Config setCcAlgorithmName(String name) throws Quiche.Error {
+        final int resultCode = Native.quiche_config_set_cc_algorithm_name(getPointer(), name);
+        if(Quiche.SUCCESS_CODE != resultCode) throw new Quiche.Error(resultCode);
         return this;
     }
 
     public final Config enableHystart(boolean v) {
         Native.quiche_config_enable_hystart(getPointer(), v);
         return this;
-    }
-
-    private final void free() {
-        
     }
 
 }

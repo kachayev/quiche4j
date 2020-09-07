@@ -58,7 +58,7 @@ public class H3Server {
             return this.h3Conn;
         }
 
-        public final void setH3Conn(H3Connection conn) {
+        public final void setH3Connection(H3Connection conn) {
             this.h3Conn = conn;
         }
 
@@ -79,20 +79,25 @@ public class H3Server {
 
     public static final int MAX_DATAGRAM_SIZE = 1350;
 
-    public static final String SERVER_NAME = "quiche4j";
+    public static final String SERVER_NAME = "Quiche4j";
 
     public static void main(String[] args) throws IOException {
         final byte[] buf = new byte[65535];
         final byte[] out = new byte[MAX_DATAGRAM_SIZE];
 
-        final DatagramSocket socket = new DatagramSocket(4433);
-        socket.setSoTimeout(1_000);
-
         final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
+        
+        try {
+            config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
+        } catch (Quiche.Error e) {
+            System.out.println("! wrong protocol " + e.getErrorCode());
+            System.exit(1);
+            return;
+        }
+
         config.verityPeer(false);
         config.loadCertChainFromPemFile("src/main/resources/examples/cert.crt");
         config.loadPrivKeyFromPemFile("src/main/resources/examples/cert.key");
-        config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
         config.setMaxIdleTimeout(5_000);
         config.setMaxUdpPayloadSize(MAX_DATAGRAM_SIZE);
         config.setInitialMaxData(10_000_000);
@@ -103,6 +108,9 @@ public class H3Server {
         config.setInitialMaxStreamsUni(100);
         config.setDisableActiveMigration(true);
         config.enableEarlyData();
+
+        final DatagramSocket socket = new DatagramSocket(4433);
+        socket.setSoTimeout(1_000);
 
         final H3Config h3Config = H3Config.newInstance();
         final byte[] connIdSeed = Quiche.newConnectionIdSeed();
@@ -174,8 +182,14 @@ public class H3Server {
 
                     // POTENTIALLY COALESCED PACKETS
                     final Connection conn = client.getConnection();
-                    final int read = conn.recv(packetBuf);
-                    if(-1 == read) continue;
+                    int read;
+                    try {
+                        read = conn.recv(packetBuf);
+                    } catch (Quiche.Error e) {
+                        System.out.println("> recv failed " + e.getErrorCode());
+                        continue;
+                    }
+                    if(Quiche.ERROR_CODE_DONE == read) continue;
  
                     System.out.println("> conn.recv " + read + " bytes");
 
@@ -185,7 +199,7 @@ public class H3Server {
                         System.out.println("> handshake done " + conn.isEstablished());
                         try {
                             h3Conn = H3Connection.withTransport(conn, h3Config);
-                            client.setH3Conn(h3Conn);
+                            client.setH3Connection(h3Conn);
 
                             System.out.println("> new H3 connection " + h3Conn);
                         } catch (Exception e) {
@@ -203,23 +217,30 @@ public class H3Server {
 
                         // H3 POLL
                         final List<H3Header> headers = new ArrayList<>();
-                        final Long streamId = h3Conn.poll(new H3PollEvent() {
-                            public void onHeader(long streamId, String name, String value) {
-                                // xxx(okachaiev): this won't work as expected in multi-threaded
-                                // environment. it feels it would be reasonable to have onHeaders
-                                // API instead of callback for each header separately
-                                headers.add(new H3Header(name, value));
-                                System.out.println("< got header " + name + " on " + streamId);
-                            }
-
-                            public void onData(long streamId) {
-                                System.out.println("< got data on " + streamId);
-                            }
-
-                            public void onFinished(long streamId) {
-                                System.out.println("< finished " + streamId);
-                            }
-                        });
+                        Long streamId = 0L;
+                        try {
+                            streamId = h3Conn.poll(new H3PollEvent() {
+                                public void onHeader(long streamId, String name, String value) {
+                                    // xxx(okachaiev): this won't work as expected in multi-threaded
+                                    // environment. it feels it would be reasonable to have onHeaders
+                                    // API instead of callback for each header separately
+                                    headers.add(new H3Header(name, value));
+                                    System.out.println("< got header " + name + " on " + streamId);
+                                }
+    
+                                public void onData(long streamId) {
+                                    System.out.println("< got data on " + streamId);
+                                }
+    
+                                public void onFinished(long streamId) {
+                                    System.out.println("< finished " + streamId);
+                                }
+                            });
+                        } catch (Quiche.Error e) {
+                            System.out.println("! poll failed " + e.getErrorCode());
+                            reading.set(false);
+                            break;
+                        }
 
                         System.out.println("< poll " + streamId);
                         if(null == streamId) {
@@ -240,11 +261,18 @@ public class H3Server {
                 }
             }
 
+            int len = 0;
             for(Client client: clients.values()) {
+                final Connection conn = client.getConnection();
                 while(true) {
                     // WRITING
-                    final int len = client.getConnection().send(out);
-                    if (-1 == len || 0 == len) break;
+                    try {
+                        len = conn.send(out);
+                    } catch (Quiche.Error e) {
+                        System.out.println("! conn.send failed " + e.getErrorCode());
+                        break;
+                    }
+                    if (len <= 0) break;
                     System.out.println("> conn.send "+ len + " bytes");
                     final DatagramPacket packet =
                         new DatagramPacket(out, len, client.getAddress(), client.getPort());
@@ -284,13 +312,18 @@ public class H3Server {
         headers.add(new H3Header("server", SERVER_NAME));
         headers.add(new H3Header("content-length", Integer.toString(body.length)));
 
-        if(!h3Conn.sendResponse(streamId, headers, false)) {
-            // STREAM BLOCKED
-            System.out.print("> stream " + streamId + " blocked");
-
-            // STASH PARTIAL RESPONSE
-            final PartialResponse part = new PartialResponse(headers, body, 0L);
-            client.partialResponses.put(streamId, part);
+        try {
+            if(!h3Conn.sendResponse(streamId, headers, false)) {
+                // STREAM BLOCKED
+                System.out.print("> stream " + streamId + " blocked");
+    
+                // STASH PARTIAL RESPONSE
+                final PartialResponse part = new PartialResponse(headers, body, 0L);
+                client.partialResponses.put(streamId, part);
+                return;
+            }
+        } catch (Quiche.Error e) {
+            System.out.println("! h3.send response failed " + e.getErrorCode());
             return;
         }
 
@@ -311,8 +344,13 @@ public class H3Server {
 
         final H3Connection h3 = client.getH3Connection();
         if(null != resp.headers) {
-            final boolean sent = h3.sendResponse(streamId, resp.headers, false);
-            if(!sent) return;
+            try {
+                final boolean sent = h3.sendResponse(streamId, resp.headers, false);
+                if(!sent) return;
+            } catch (Quiche.Error e) {
+                System.out.println("! h3.send response failed " + e.getErrorCode());
+                return;
+            }
         }
 
         resp.headers = null;

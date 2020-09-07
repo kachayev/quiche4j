@@ -15,6 +15,9 @@ public final class Quiche {
     public static final int MAX_CONN_ID_LEN = 20;
     public static final String CONN_ID_SEED_ALGO = "HMACSHA256";
 
+    public static long ERROR_CODE_DONE = -1L;
+    public static long SUCCESS_CODE = 0L;
+
     public static final int PROTOCOL_VERSION_DRAFT27 = 0xff00_001b;
     public static final int PROTOCOL_VERSION_DRAFT28 = 0xff00_001c;
     public static final int PROTOCOL_VERSION_DRAFT29 = 0xff00_001d;
@@ -36,6 +39,20 @@ public final class Quiche {
             return this.value;
         }
     }
+
+	// xxx(okachaiev): can we get advantage by caching instances?
+	public static class Error extends Exception {
+		private final int errorCode;
+		
+		public Error(int errorCode) {
+			super();
+			this.errorCode = errorCode;
+		}
+
+		public final int getErrorCode() {
+			return this.errorCode;
+		}
+	}
 
     public static final byte[] newConnectionId() {
         return newConnectionId(new Random());

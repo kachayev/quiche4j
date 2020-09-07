@@ -225,11 +225,11 @@ Have a look at the `src/main/java/io/quiche4j/examples/` folder for more complet
 ## TODO
 
 - [ ] Version negotiation, retry, connection token validation
-- [ ] Errors handling (covert between Rust's `Error::*` and return codes and/or exceptions when necessary)
 - [ ] Better build script to provide linking for different platforms, optimized Rust build instead of debug
 - [ ] Organize examples code
 - [ ] Documentation (like... a lot)
-- [ ] Find a good way to plug custom timers
+- [ ] Propagate Rust panics into Java exceptions
+- [ ] All "xxx" comments both from Java and Rust codebase
 
 ## Copyright
 

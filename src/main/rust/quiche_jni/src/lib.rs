@@ -3,9 +3,29 @@ extern crate jni;
 use jni::objects::{JClass, JObject, JString, JValue, ReleaseMode};
 use jni::sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray};
 use jni::JNIEnv;
-use quiche::{h3, Config, Connection, Header, StreamIter, Type};
+use quiche::{h3, Config, Connection, Error, Header, StreamIter, Type};
 use std::pin::Pin;
 use std::slice;
+
+type JNIResult<T> = Result<T, jni::errors::Error>;
+
+fn h3_error_code(error: h3::Error) -> i32 {
+    match error {
+        h3::Error::Done => -1,
+        h3::Error::BufferTooShort => -2,
+        h3::Error::InternalError => -3,
+        h3::Error::ExcessiveLoad => -4,
+        h3::Error::IdError => -5,
+        h3::Error::StreamCreationError => -6,
+        h3::Error::ClosedCriticalStream => -7,
+        h3::Error::MissingSettings => -8,
+        h3::Error::FrameUnexpected => -9,
+        h3::Error::FrameError => -10,
+        h3::Error::QpackDecompressionFailed => -11,
+        h3::Error::TransportError { .. } => -12,
+        h3::Error::StreamBlocked => -13,
+    }
+}
 
 #[no_mangle]
 #[warn(unused_variables)]
@@ -322,12 +342,8 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1recv(
     // internally executes GetByteArrayRegion
     let mut buf = env.convert_byte_array(java_buf).unwrap();
     match conn.recv(&mut buf) {
-        Ok(v) => v as i32,
-        // xxx(okachaiev): properly handle errors
-        Err(e) => {
-            println!("[jni] conn.recv error {:?}", e);
-            -1 as i32
-        }
+        Ok(v) => v as jint,
+        Err(e) => e as jint,
     }
 }
 
@@ -351,10 +367,8 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1send(
     )
     .unwrap();
     match sent_len {
-        Ok(v) => v as i32,
-        // xxx(okachaiev): replace magical constant
-        Err(quiche::Error::Done) => -1 as jint,
-        Err(e) => panic!(e),
+        Ok(v) => v as jint,
+        Err(e) => e as jint,
     }
 }
 
@@ -499,11 +513,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1recv(
     match conn.stream_recv(stream_id as u64, &mut buf) {
         // xxx(okachaiev): find a way to convey this information
         Ok((out_len, _out_fin)) => out_len as i32,
-        // xxx(okachaiev): properly handle errors
-        Err(e) => {
-            println!("[jni] conn.stream_recv error {:?}", e);
-            -1 as i32
-        }
+        Err(e) => e as jint,
     }
 }
 
@@ -530,10 +540,8 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1send(
     )
     .unwrap();
     match sent_len {
-        Ok(v) => v as i32,
-        // xxx(okachaiev): replace magical constant
-        Err(quiche::Error::Done) => -1 as jint,
-        Err(e) => panic!(e),
+        Ok(v) => v as jint,
+        Err(e) => e as jint,
     }
 }
 
@@ -567,10 +575,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1capacity(
     let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
     match conn.stream_capacity(stream_id as u64) {
         Ok(v) => v as jint,
-        Err(e) => {
-            println!("[jni] stream capacity error {:?}", e);
-            0 as jint
-        }
+        Err(e) => e as jint,
     }
 }
 
@@ -618,7 +623,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1stream_1iter_1next(
     let stream_iter = unsafe { &mut *(stream_iter_ptr as *mut StreamIter) };
     match stream_iter.next() {
         Some(stream_id) => stream_id as jlong,
-        None => -1 as jlong,
+        None => Error::Done as jlong,
     }
 }
 
@@ -656,17 +661,14 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1free(
     unsafe { Box::from_raw(h3_conn_ptr as *mut h3::Connection) };
 }
 
-fn convert_to_string<'e, V>(env: &JNIEnv<'e>, val: V) -> Result<String, jni::errors::Error>
+fn convert_to_string<'e, V>(env: &JNIEnv<'e>, val: V) -> JNIResult<String>
 where
     V: Into<JString<'e>>,
 {
     Ok(env.get_string(val.into())?.into())
 }
 
-fn headers_from_java<'e>(
-    env: &JNIEnv<'e>,
-    headers: jobjectArray,
-) -> Result<Vec<h3::Header>, jni::errors::Error> {
+fn headers_from_java<'e>(env: &JNIEnv<'e>, headers: jobjectArray) -> JNIResult<Vec<h3::Header>> {
     let len = env.get_array_length(headers)? as i32;
     let mut buf = Vec::<h3::Header>::with_capacity(len as usize);
     for i in 0..len {
@@ -716,8 +718,9 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1response(
     let req = headers_from_java(&env, headers).unwrap();
     match h3_conn.send_response(conn, stream_id as u64, &req, fin != 0) {
         Ok(_) => 0 as jint,
-        Err(h3::Error::StreamBlocked) => -1 as jint,
-        Err(e) => panic!(e),
+        // xxx(okachaiev): it's probably better not to lie about the code
+        Err(h3::Error::StreamBlocked) => Error::Done as jint,
+        Err(e) => h3_error_code(e) as jint,
     }
 }
 
@@ -746,7 +749,7 @@ fn call_on_header(
     stream_id: u64,
     name: &str,
     value: &str,
-) -> Result<(), jni::errors::Error> {
+) -> JNIResult<()> {
     env.call_method(
         handler,
         "onHeader",
@@ -760,7 +763,7 @@ fn call_on_header(
     Ok(())
 }
 
-fn call_on_data(env: &JNIEnv, handler: jobject, stream_id: u64) -> Result<(), jni::errors::Error> {
+fn call_on_data(env: &JNIEnv, handler: jobject, stream_id: u64) -> JNIResult<()> {
     env.call_method(
         handler,
         "onData",
@@ -770,11 +773,7 @@ fn call_on_data(env: &JNIEnv, handler: jobject, stream_id: u64) -> Result<(), jn
     Ok(())
 }
 
-fn call_on_finished(
-    env: &JNIEnv,
-    handler: jobject,
-    stream_id: u64,
-) -> Result<(), jni::errors::Error> {
+fn call_on_finished(env: &JNIEnv, handler: jobject, stream_id: u64) -> JNIResult<()> {
     env.call_method(
         handler,
         "onFinished",
@@ -810,9 +809,8 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1poll(
             call_on_finished(&env, handler, stream_id).unwrap();
             stream_id as jlong
         }
-        // xxx(okachaiev): magical constant
-        Err(h3::Error::Done) => -1 as jlong,
-        Err(e) => panic!(e),
+        Err(h3::Error::Done) => Error::Done as jlong,
+        Err(e) => h3_error_code(e) as jlong,
     }
 }
 
@@ -839,12 +837,8 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1recv_1body(
     )
     .unwrap();
     match body_len {
-        Ok(v) => v as i32,
-        Err(e) => {
-            // xxx(okachaiev): better errors processing here
-            println!("[jni] recv body error {:?}", e);
-            0 as i32
-        }
+        Ok(v) => v as jint,
+        Err(e) => h3_error_code(e) as jint,
     }
 }
 
