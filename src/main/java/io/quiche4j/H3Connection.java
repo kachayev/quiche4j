@@ -51,13 +51,15 @@ public final class H3Connection {
     }
 
     public final boolean sendResponse(long streamId, H3Header[] headers, boolean fin) throws Quiche.Error {
-        final int r = Native.quiche_h3_send_response(getPointer(), conn.getPointer(), streamId, headers, fin);
-        if(r < 0 && r != Quiche.ERROR_CODE_DONE) throw new Quiche.Error(r);
-        return (Quiche.ERROR_CODE_DONE != r);
+        final int sent = Native.quiche_h3_send_response(getPointer(), conn.getPointer(), streamId, headers, fin);
+        if(sent < 0 && Quiche.ERROR_CODE_DONE != sent) throw new Quiche.Error(sent);
+        return (Quiche.ERROR_CODE_DONE != sent);
     }
 
-    public final long sendBody(long streamId, byte[] body, boolean fin) {
-        return Native.quiche_h3_send_body(getPointer(), conn.getPointer(), streamId, body, fin);
+    public final long sendBody(long streamId, byte[] body, boolean fin) throws Quiche.Error {
+        final long sent = Native.quiche_h3_send_body(getPointer(), conn.getPointer(), streamId, body, fin);
+        if(sent < 0 && Quiche.ERROR_CODE_DONE != sent) throw new Quiche.Error((int) sent);
+        return sent;
     }
 
     // Rust API returns poll event explicitly which works really well

@@ -327,7 +327,13 @@ public class H3Server {
             return;
         }
 
-        final long written = h3Conn.sendBody(streamId, body, true);
+        long written = 0;
+        try {
+            written = h3Conn.sendBody(streamId, body, true);
+        } catch (Quiche.Error e) {
+            System.out.println("! h3 send body failed " + e.getErrorCode());
+            return;
+        }
 
         System.out.println("> send body " + written + " body");
 
@@ -356,7 +362,13 @@ public class H3Server {
         resp.headers = null;
 
         final byte[] body = Arrays.copyOfRange(resp.body, (int) resp.written, resp.body.length);
-        final long written = h3.sendBody(streamId, body, true);
+        long written = 0;
+        try {
+            written = h3.sendBody(streamId, body, true);
+        } catch (Quiche.Error e) {
+            System.out.println("! h3 send body failed " + e.getErrorCode());
+            return;
+        }
 
         System.out.println("> send body " + written + " body");
 

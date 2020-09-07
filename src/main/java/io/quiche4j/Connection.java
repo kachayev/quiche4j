@@ -28,13 +28,14 @@ public class Connection {
 
     public final int send(byte[] buf) throws Quiche.Error {
         final int sent = Native.quiche_conn_send(getPointer(), buf);
-        if(sent < 0) throw new Quiche.Error(sent);
+        if(sent < 0 && Quiche.ERROR_CODE_DONE != sent)
+            throw new Quiche.Error(sent);
         return sent;
     }
 
     public final int recv(byte[] buf) throws Quiche.Error {
         final int recv = Native.quiche_conn_recv(getPointer(), buf);
-        if(recv < 0 && recv != Quiche.ERROR_CODE_DONE)
+        if(recv < 0 && Quiche.ERROR_CODE_DONE != recv)
             throw new Quiche.Error(recv);
         return recv;
     }
@@ -71,14 +72,15 @@ public class Connection {
 
     public int streamRecv(long streamId, byte[] buf) throws Quiche.Error {
         final int recv = Native.quiche_conn_stream_recv(getPointer(), streamId, buf);
-        if(recv < 0 && recv != Quiche.ERROR_CODE_DONE)
+        if(recv < 0 && Quiche.ERROR_CODE_DONE != recv)
             throw new Quiche.Error(recv);
         return recv;
     }
 
     public int streamSend(long streamId, byte[] buf, boolean fin) throws Quiche.Error {
         final int sent = Native.quiche_conn_stream_send(getPointer(), streamId, buf, fin);
-        if(sent < 0) throw new Quiche.Error(sent);
+        if(sent < 0 && Quiche.ERROR_CODE_DONE != sent)
+            throw new Quiche.Error(sent);
         return sent;
     }
 

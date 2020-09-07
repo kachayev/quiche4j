@@ -738,9 +738,10 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1body(
     let h3_conn = unsafe { &mut *(h3_ptr as *mut h3::Connection) };
     let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
     let body: Vec<u8> = env.convert_byte_array(java_body).unwrap();
-    h3_conn
-        .send_body(conn, stream_id as u64, &body[..], fin != 0)
-        .unwrap() as jlong
+    match h3_conn.send_body(conn, stream_id as u64, &body[..], fin != 0) {
+        Ok(v) => v as jlong,
+        Err(e) => h3_error_code(e) as jlong,
+    }
 }
 
 fn call_on_header(
