@@ -23,7 +23,7 @@ $ ./h3-client.sh http://quic.tech:8443
 Run HTTP3 server example:
 
 ```shell
-$ ./h3-server.sh
+$ ./h3-server.sh :4433
 ```
 
 ## API

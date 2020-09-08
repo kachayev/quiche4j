@@ -82,6 +82,18 @@ public class H3Server {
     public static final String SERVER_NAME = "Quiche4j";
 
     public static void main(String[] args) throws IOException {
+        String hostname = "localhost";
+        int port = 4433;
+        if(0 < args.length) {
+            if(args[0].contains(":")) {
+                final String[] parts = args[0].split(":", 2);
+                if(!parts[0].isEmpty()) hostname = parts[0];
+                port = Integer.parseInt(parts[1]);
+            } else {
+                port = Integer.parseInt(args[0]);
+            }
+        }
+
         final byte[] buf = new byte[65535];
         final byte[] out = new byte[MAX_DATAGRAM_SIZE];
 
@@ -109,7 +121,7 @@ public class H3Server {
         config.setDisableActiveMigration(true);
         config.enableEarlyData();
 
-        final DatagramSocket socket = new DatagramSocket(4433);
+        final DatagramSocket socket = new DatagramSocket(port, InetAddress.getByName(hostname));
         socket.setSoTimeout(1_000);
 
         final H3Config h3Config = H3Config.newInstance();
@@ -119,7 +131,7 @@ public class H3Server {
         final AtomicBoolean reading = new AtomicBoolean(true);
         final AtomicBoolean running = new AtomicBoolean(true);
 
-        System.out.println("! listening on 127.0.0.1:4433");
+        System.out.println(String.format("! listening on %s:%d", hostname, port));
 
         while(running.get()) {
             // READING
