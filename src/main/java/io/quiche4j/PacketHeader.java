@@ -94,7 +94,7 @@ public final class PacketHeader {
     }
 
     protected final void setToken(byte[] token) {
-        this.token = token;
+        this.token = token.length > 0 ? token : null;
     }
 
     public final byte[] getToken() {

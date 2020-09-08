@@ -40,7 +40,10 @@ public final class Quiche {
         }
     }
 
-	// xxx(okachaiev): can we get advantage by caching instances?
+    // xxx(okachaiev): can we get advantage by caching instances?
+    // xxx(okachaiev): should we even use Throwables here? dealing with
+    // error codes would not be Java-style at all but it would safe us
+    // from paying performance penalties
 	public static class Error extends Exception {
 		private final int errorCode;
 		
@@ -87,13 +90,21 @@ public final class Quiche {
         return Arrays.copyOfRange(signed, 0, MAX_CONN_ID_LEN);
     }
 
+    public static final int negotiateVersion(
+            byte[] sourceConnId, byte[] destinationConnId, byte[] buf) throws Error {
+        final int len = Native.quiche_negotiate_version(sourceConnId, destinationConnId, buf);
+        if(len < 0) throw new Error(len);
+        return len;
+    }
+
     public static final boolean versionIsSupported(int version) {
         return Native.quiche_version_is_supported(version);
     }
 
-    public static final int negotiateVersion(
-            byte[] sourceConnectionid, byte[] destinationConnectionId, byte[] buf) throws Error {
-        final int len = Native.quiche_negotiate_version(sourceConnectionid, destinationConnectionId, buf);
+    public static final int retry(
+            byte[] sourceConnId, byte[] destinationConnId, byte[] newSourceConnId,
+            byte[] token, int version, byte[] buf) throws Error {
+        final int len = Native.quiche_retry(sourceConnId, destinationConnId, newSourceConnId, token, version, buf);
         if(len < 0) throw new Error(len);
         return len;
     }
