@@ -33,7 +33,7 @@ $ ./h3-server.sh :4433
 Before establishing a QUIC connection, you need to create a configuration object:
 
 ```java
-final Config config = Config.newConfig(Quiche.PROTOCOL_VERSION);
+final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
 ```
 
 On the client-side the `Quiche.connect` utility function can be used to create a new connection, while `Quiche.accept` is for servers:
