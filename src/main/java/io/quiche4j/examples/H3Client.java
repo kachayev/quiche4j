@@ -114,6 +114,7 @@ public class H3Client {
         req.add(new H3Header(":authority", uri.getAuthority()));
         req.add(new H3Header(":path", uri.getPath()));
         req.add(new H3Header("user-agent", CLIENT_NAME));
+        req.add(new H3Header("content-length", "0"));
 		h3Conn.sendRequest(req, true);
 
         System.out.println("> started sending cycle");

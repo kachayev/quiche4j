@@ -187,7 +187,7 @@ public class H3Server {
                             continue;
                         }
 
-                        // RETRY IF TOKEN IS MISSING
+                        // RETRY IF TOKEN IS EMPTY
                         if(null == hdr.getToken()) {
                             System.out.println("> stateless retry");
 
@@ -374,9 +374,6 @@ public class H3Server {
     }
 
     public final static byte[] validateToken(InetAddress address, byte[] token) {
-        System.out.println(Utils.asHex(address.getAddress()));
-        System.out.println(Utils.asHex(token));
-
         if(token.length <= 8) return null;
         if(!Arrays.equals(SERVER_NAME_BYTES, Arrays.copyOfRange(token, 0, SERVER_NAME_BYTES_LEN))) return null;
         final byte[] addr = address.getAddress();
@@ -384,7 +381,7 @@ public class H3Server {
             return null;
         return Arrays.copyOfRange(token, SERVER_NAME_BYTES_LEN + addr.length, token.length);
     }
-    
+
     public final static void handleRequest(Client client, Long streamId, List<H3Header> req) {
         System.out.println("< request " + streamId);
 
