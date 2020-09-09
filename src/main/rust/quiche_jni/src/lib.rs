@@ -876,7 +876,6 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1poll(
             call_on_finished(&env, handler, stream_id).unwrap();
             stream_id as jlong
         }
-        Err(h3::Error::Done) => Error::Done as jlong,
         Err(e) => h3_error_code(e) as jlong,
     }
 }
