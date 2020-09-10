@@ -89,58 +89,22 @@ public class H3Client {
         socket.setSoTimeout(2_000);
 		socket.send(handshakePacket);
 
-		while(!conn.isEstablished() && !conn.isClosed()) {
-			DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-			socket.receive(packet);
-			final int recvBytes = packet.getLength();
-            System.out.println("> socket.recieve " + recvBytes + " bytes");
-            try {
-                // xxx(okachaiev): if we extend `recv` API to with optional buf len,
-                // we could avoid Arrays.copy here
-                final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
-
-                System.out.println("> conn.recv " + read + " bytes");
-            } catch (Quiche.Error e) {
-                System.out.println("> recv failed " + e.getErrorCode());
-                continue;
-            }
-		}
-
-        final H3Config h3Config = H3Config.newInstance();
-		final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
-        List<H3Header> req = new ArrayList<H3Header>();
-        req.add(new H3Header(":method", "GET"));
-        req.add(new H3Header(":scheme", uri.getScheme()));
-        req.add(new H3Header(":authority", uri.getAuthority()));
-        req.add(new H3Header(":path", uri.getPath()));
-        req.add(new H3Header("user-agent", CLIENT_NAME));
-        req.add(new H3Header("content-length", "0"));
-		h3Conn.sendRequest(req, true);
-
-        System.out.println("> started sending cycle");
-		while(true) {
-            try {
-                len = conn.send(buffer);
-            } catch (Quiche.Error e) {
-                System.out.println("! conn.send failed " + e.getErrorCode());
-                break;
-            }
-			if (len <= 0) break;
-			System.out.println("> h3.send "+ len + " bytes");
-			DatagramPacket packet = new DatagramPacket(buffer, len, address, port);
-			socket.send(packet);
-		}
-        System.out.println("> request succesfully sent");
-
+        Long streamId = null;
         final AtomicBoolean reading = new AtomicBoolean(false);
-		while(!conn.isClosed()) {
+        final H3Config h3Config = H3Config.newInstance();
+        DatagramPacket packet; 
+        H3Connection h3Conn = null;
+
+        while(!conn.isClosed()) {
+            // READING LOOP
             while(reading.get()) {
-                // READING
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     socket.receive(packet);
                     final int recvBytes = packet.getLength();
                     System.out.println("> socket.recieve " + recvBytes + " bytes");
+                    // xxx(okachaiev): if we extend `recv` API to with optional buf len,
+                    // we could avoid Arrays.copy here
                     final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
                     System.out.println("> recv " + read + " bytes");
                 } catch (SocketTimeoutException e) {
@@ -153,54 +117,97 @@ public class H3Client {
                 }
 
                 // POLL
-                Long streamId = null;
-                try {
-                    streamId = h3Conn.poll(new H3PollEvent() {
-                        public void onHeader(long streamId, String name, String value) {
-                            System.out.println(name + ": " + value);
-                        }
-
-                        public void onData(long streamId) {
-                            final byte[] body = new byte[MAX_DATAGRAM_SIZE];
-                            try {
-                                final int bodyLength = h3Conn.recvBody(streamId, body);
-                                System.out.println("< got body " + bodyLength + " bytes for " + streamId);
-                                final byte[] buf = Arrays.copyOfRange(body, 0, bodyLength);
-                                System.out.println(new String(buf, StandardCharsets.UTF_8));
-                            } catch (Quiche.Error e) {
-                                System.out.println("> recv body failed " + e.getErrorCode());
+                if(null != h3Conn) {
+                    try {
+                        final H3Connection h3c = h3Conn;
+                        streamId = h3Conn.poll(new H3PollEvent() {
+                            public void onHeader(long _streamId, String name, String value) {
+                                System.out.println(name + ": " + value);
                             }
-                        }
-
-                        public void onFinished(long streamId) {
-                            System.out.println("> response finished");
-                            System.out.println("> close code " + conn.close(true, 0x00, "kthxbye"));
-                            reading.set(false);
-                        }
-                    });
-                } catch (Quiche.Error e) {
-                    System.out.println("> poll failed " + e.getErrorCode());
-                    reading.set(false);
-                    break;
+    
+                            public void onData(long streamId) {
+                                try {
+                                    final int bodyLength = h3c.recvBody(streamId, buffer);
+                                    System.out.println("< got body " + bodyLength + " bytes for " + streamId);
+                                    final byte[] body = Arrays.copyOfRange(buffer, 0, bodyLength);
+                                    System.out.println(new String(body, StandardCharsets.UTF_8));
+                                } catch (Quiche.Error e) {
+                                    System.out.println("> recv body failed " + e.getErrorCode());
+                                }
+                            }
+    
+                            public void onFinished(long streamId) {
+                                System.out.println("> response finished");
+                                System.out.println("> close code " + conn.close(true, 0x00, "kthxbye"));
+                                reading.set(false);
+                            }
+                        });
+                    } catch (Quiche.Error e) {
+                        System.out.println("> poll failed " + e.getErrorCode());
+                        reading.set(false);
+                        break;
+                    }
+    
+                    if(null == streamId) reading.set(false);
                 }
-
-                if(null == streamId) reading.set(false);
             }
 
-            // WRITING
+            packet = new DatagramPacket(buffer, buffer.length);
+            socket.receive(packet);
+            final int recvBytes = packet.getLength();
+            System.out.println("> socket.recieve " + recvBytes + " bytes");
             try {
-                len = conn.send(buffer);
-                if (len <= 0) {
-                    reading.set(true);
-                    continue;
-                }
-                System.out.println("> h3.send "+ len + " bytes");
-                DatagramPacket packet = new DatagramPacket(buffer, len, address, port);
-                socket.send(packet);
+                // xxx(okachaiev): if we extend `recv` API to with optional buf len,
+                // we could avoid Arrays.copy here
+                final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
+
+                System.out.println("> conn.recv " + read + " bytes");
             } catch (Quiche.Error e) {
-                System.out.println("! conn.send failed " + e.getErrorCode());
-                reading.set(true);
+                System.out.println("> recv failed " + e.getErrorCode());
+
                 continue;
+            }
+
+            if(conn.isClosed()) {
+                System.out.println("! conn is closed " + conn.stats());
+
+                socket.close();
+                System.exit(1);
+                return;
+            }
+
+            if(conn.isEstablished() && null == h3Conn) {
+                h3Conn = H3Connection.withTransport(conn, h3Config);
+                List<H3Header> req = new ArrayList<H3Header>();
+                req.add(new H3Header(":method", "GET"));
+                req.add(new H3Header(":scheme", uri.getScheme()));
+                req.add(new H3Header(":authority", uri.getAuthority()));
+                req.add(new H3Header(":path", uri.getPath()));
+                req.add(new H3Header("user-agent", CLIENT_NAME));
+                req.add(new H3Header("content-length", "0"));
+                h3Conn.sendRequest(req, true);
+            }
+
+            // WRITING LOOP
+            while(true) {
+                try {
+                    len = conn.send(buffer);
+                } catch (Quiche.Error e) {
+                    System.out.println("! conn.send failed " + e.getErrorCode());
+                    break;
+                }
+                if (len <= 0) break;
+                System.out.println("> h3.send "+ len + " bytes");
+                packet = new DatagramPacket(buffer, len, address, port);
+                socket.send(packet);
+            }
+
+            if(conn.isClosed()) {
+                System.out.println("! conn is closed " + conn.stats());
+
+                socket.close();
+                System.exit(1);
+                return;
             }
         }
 
