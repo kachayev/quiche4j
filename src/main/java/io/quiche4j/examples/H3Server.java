@@ -129,15 +129,13 @@ public class H3Server {
         final H3Config h3Config = H3Config.newInstance();
         final byte[] connIdSeed = Quiche.newConnectionIdSeed();
         final HashMap<String, Client> clients = new HashMap<>();
-
-        final AtomicBoolean reading = new AtomicBoolean(true);
         final AtomicBoolean running = new AtomicBoolean(true);
 
         System.out.println(String.format("! listening on %s:%d", hostname, port));
 
         while(running.get()) {
             // READING
-            while(reading.get()) {
+            while(true) {
                 final DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 try {
                     socket.receive(packet);
@@ -218,7 +216,7 @@ public class H3Server {
                             continue;
                         }
 
-                        byte[] sourceConnId = connId; // hdr.getDcid(); // ???
+                        byte[] sourceConnId = connId;
                         final byte[] destinationConnId = hdr.getDestinationConnectionId();
                         if(sourceConnId.length != destinationConnId.length) {
                             System.out.println("! invalid destination connection id");
@@ -244,7 +242,7 @@ public class H3Server {
                         System.out.println("> recv failed " + e.getErrorCode());
                         continue;
                     }
-                    if(Quiche.ERROR_CODE_DONE == read) continue;
+                    if(read <= 0) continue;
  
                     System.out.println("> conn.recv " + read + " bytes");
 
@@ -293,34 +291,30 @@ public class H3Server {
                             });
                         } catch (Quiche.Error e) {
                             System.out.println("! poll failed " + e.getErrorCode());
-                            reading.set(false);
                             break;
                         }
 
                         System.out.println("< poll " + streamId);
-                        if(null == streamId) {
-                            reading.set(false);
-                            break;
-                        }
+                        if(null == streamId) break;
 
                         if(0 < headers.size()) {
                             handleRequest(client, streamId, headers);
                         }
                     }
                 } catch (SocketTimeoutException e) {
-                    reading.set(false);
                     // TIMERS
                     for(Client client: clients.values()) {
                         client.getConnection().onTimeout();
                     }
+                    break;
                 }
             }
 
+            // WRITES
             int len = 0;
             for(Client client: clients.values()) {
                 final Connection conn = client.getConnection();
                 while(true) {
-                    // WRITING
                     try {
                         len = conn.send(out);
                     } catch (Quiche.Error e) {
@@ -345,7 +339,6 @@ public class H3Server {
             }
 
             // BACK TO READING
-            reading.set(true);
         }
 
         System.out.println("> server stopped");
