@@ -90,7 +90,7 @@ public class H3Client {
 		socket.send(handshakePacket);
 
         Long streamId = null;
-        final AtomicBoolean reading = new AtomicBoolean(false);
+        final AtomicBoolean reading = new AtomicBoolean(true);
         final H3Config h3Config = H3Config.newInstance();
         DatagramPacket packet; 
         H3Connection h3Conn = null;
@@ -124,7 +124,7 @@ public class H3Client {
                             public void onHeader(long _streamId, String name, String value) {
                                 System.out.println(name + ": " + value);
                             }
-    
+
                             public void onData(long streamId) {
                                 try {
                                     final int bodyLength = h3c.recvBody(streamId, buffer);
@@ -135,7 +135,7 @@ public class H3Client {
                                     System.out.println("> recv body failed " + e.getErrorCode());
                                 }
                             }
-    
+
                             public void onFinished(long streamId) {
                                 System.out.println("> response finished");
                                 System.out.println("> close code " + conn.close(true, 0x00, "kthxbye"));
@@ -147,25 +147,9 @@ public class H3Client {
                         reading.set(false);
                         break;
                     }
-    
+
                     if(null == streamId) reading.set(false);
                 }
-            }
-
-            packet = new DatagramPacket(buffer, buffer.length);
-            socket.receive(packet);
-            final int recvBytes = packet.getLength();
-            System.out.println("> socket.recieve " + recvBytes + " bytes");
-            try {
-                // xxx(okachaiev): if we extend `recv` API to with optional buf len,
-                // we could avoid Arrays.copy here
-                final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
-
-                System.out.println("> conn.recv " + read + " bytes");
-            } catch (Quiche.Error e) {
-                System.out.println("> recv failed " + e.getErrorCode());
-
-                continue;
             }
 
             if(conn.isClosed()) {
@@ -209,6 +193,8 @@ public class H3Client {
                 System.exit(1);
                 return;
             }
+
+            reading.set(true);
         }
 
         System.out.println("> conn is closed");
