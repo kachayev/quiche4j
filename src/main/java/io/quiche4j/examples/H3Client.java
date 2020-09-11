@@ -86,7 +86,7 @@ public class H3Client {
 
 		final DatagramPacket handshakePacket = new DatagramPacket(buffer, len, address, port);
         final DatagramSocket socket = new DatagramSocket(10002);
-        socket.setSoTimeout(2_000);
+        socket.setSoTimeout(200);
 		socket.send(handshakePacket);
 
         Long streamId = null;

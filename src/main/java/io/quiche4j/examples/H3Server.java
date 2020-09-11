@@ -124,7 +124,7 @@ public class H3Server {
         config.enableEarlyData();
 
         final DatagramSocket socket = new DatagramSocket(port, InetAddress.getByName(hostname));
-        socket.setSoTimeout(1_000);
+        socket.setSoTimeout(100);
 
         final H3Config h3Config = H3Config.newInstance();
         final byte[] connIdSeed = Quiche.newConnectionIdSeed();
@@ -226,11 +226,13 @@ public class H3Server {
 
                         final Connection conn = Quiche.accept(sourceConnId, odcid, config);
 
-                        System.out.println("> new connection " + Utils.asHex(connId));
+                        System.out.println("> new connection " + Utils.asHex(sourceConnId));
 
                         client = new Client(conn);
                         client.setSource(packet.getAddress(), packet.getPort());
                         clients.put(Utils.asHex(sourceConnId), client);
+
+                        System.out.println("! # of clients: " + clients.size());
                     }
 
                     // POTENTIALLY COALESCED PACKETS
@@ -240,11 +242,12 @@ public class H3Server {
                         read = conn.recv(packetBuf);
                     } catch (Quiche.Error e) {
                         System.out.println("> recv failed " + e.getErrorCode());
-                        continue;
+                        break;
                     }
-                    if(read <= 0) continue;
+                    if(read <= 0) break;
  
                     System.out.println("> conn.recv " + read + " bytes");
+                    System.out.println("> conn.established " + conn.isEstablished());
 
                     // ESTABLISH H3 CONNECTION IF NONE
                     H3Connection h3Conn = client.getH3Connection();
@@ -271,34 +274,39 @@ public class H3Server {
                         // H3 POLL
                         final List<H3Header> headers = new ArrayList<>();
                         Long streamId = 0L;
-                        try {
-                            streamId = h3Conn.poll(new H3PollEvent() {
-                                public void onHeader(long streamId, String name, String value) {
-                                    // xxx(okachaiev): this won't work as expected in multi-threaded
-                                    // environment. it feels it would be reasonable to have onHeaders
-                                    // API instead of callback for each header separately
-                                    headers.add(new H3Header(name, value));
-                                    System.out.println("< got header " + name + " on " + streamId);
-                                }
-    
-                                public void onData(long streamId) {
-                                    System.out.println("< got data on " + streamId);
-                                }
-    
-                                public void onFinished(long streamId) {
-                                    System.out.println("< finished " + streamId);
-                                }
-                            });
-                        } catch (Quiche.Error e) {
-                            System.out.println("! poll failed " + e.getErrorCode());
-                            break;
-                        }
+                        while(true) {
+                            try {
+                                streamId = h3Conn.poll(new H3PollEvent() {
+                                    public void onHeader(long streamId, String name, String value) {
+                                        // xxx(okachaiev): this won't work as expected in multi-threaded
+                                        // environment. it feels it would be reasonable to have onHeaders
+                                        // API instead of callback for each header separately
+                                        headers.add(new H3Header(name, value));
+                                        System.out.println("< got header " + name + " on " + streamId);
+                                    }
+        
+                                    public void onData(long streamId) {
+                                        System.out.println("< got data on " + streamId);
+                                    }
+        
+                                    public void onFinished(long streamId) {
+                                        System.out.println("< finished " + streamId);
+                                    }
+                                });
+                            } catch (Quiche.Error e) {
+                                System.out.println("! poll failed " + e.getErrorCode());
 
-                        System.out.println("< poll " + streamId);
-                        if(null == streamId) break;
+                                // xxx(okachaiev): this should actially break from 2 loops
+                                break;
+                            }
 
-                        if(0 < headers.size()) {
-                            handleRequest(client, streamId, headers);
+                            System.out.println("< poll " + streamId);
+                            // xxx(okachaiev): this should actially break from 2 loops
+                            if(null == streamId) break;
+
+                            if(0 < headers.size()) {
+                                handleRequest(client, streamId, headers);
+                            }
                         }
                     }
                 } catch (SocketTimeoutException e) {
@@ -314,6 +322,7 @@ public class H3Server {
             int len = 0;
             for(Client client: clients.values()) {
                 final Connection conn = client.getConnection();
+                
                 while(true) {
                     try {
                         len = conn.send(out);
@@ -335,6 +344,8 @@ public class H3Server {
                     System.out.println("> cleaning up " + connId);
 
                     clients.remove(connId);
+
+                    System.out.println("! # of clients: " + clients.size());
                 }
             }
 
