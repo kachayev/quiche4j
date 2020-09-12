@@ -102,16 +102,19 @@ public class H3Client {
                 try {
                     socket.receive(packet);
                     final int recvBytes = packet.getLength();
+
                     System.out.println("> socket.recieve " + recvBytes + " bytes");
+
                     // xxx(okachaiev): if we extend `recv` API to with optional buf len,
                     // we could avoid Arrays.copy here
                     final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
-                    System.out.println("> recv " + read + " bytes");
+
+                    System.out.println("> conn.recv " + read + " bytes");
                 } catch (SocketTimeoutException e) {
                     conn.onTimeout();
                     reading.set(false);
                 } catch (Quiche.Error e) {
-                    System.out.println("> recv failed " + e.getErrorCode());
+                    System.out.println("> conn.recv failed " + e.getErrorCode());
 
                     reading.set(false);
                 }
@@ -162,6 +165,9 @@ public class H3Client {
 
             if(conn.isEstablished() && null == h3Conn) {
                 h3Conn = H3Connection.withTransport(conn, h3Config);
+
+                System.out.println("! h3 conn is established");
+
                 List<H3Header> req = new ArrayList<H3Header>();
                 req.add(new H3Header(":method", "GET"));
                 req.add(new H3Header(":scheme", uri.getScheme()));
@@ -181,7 +187,7 @@ public class H3Client {
                     break;
                 }
                 if (len <= 0) break;
-                System.out.println("> h3.send "+ len + " bytes");
+                System.out.println("> conn.send "+ len + " bytes");
                 packet = new DatagramPacket(buffer, len, address, port);
                 socket.send(packet);
             }

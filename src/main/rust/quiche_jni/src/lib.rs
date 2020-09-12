@@ -297,10 +297,12 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1accept(
 ) -> jlong {
     let mut config = unsafe { &mut *(config_ptr as *mut Config) };
     let scid: Vec<u8> = env.convert_byte_array(scid_java).unwrap();
-    let odcid: Vec<u8> = env.convert_byte_array(odcid_java).unwrap();
-    // xxx(okachaiev): using None for odcid here but when using retry()
-    // it should be an actual token
-    let conn = quiche::accept(&scid[..], None, &mut config).unwrap();
+    let buf = env.convert_byte_array(odcid_java).unwrap();
+    let odcid: Option<&[u8]> = match buf.len() {
+        0 => None,
+        _ => Some(&buf[..]),
+    };
+    let conn = quiche::accept(&scid[..], odcid, &mut config).unwrap();
     Box::into_raw(Pin::into_inner(conn)) as jlong
 }
 
@@ -626,8 +628,11 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1stream_1shutdown(
         0 => quiche::Shutdown::Read,
         _ => quiche::Shutdown::Write,
     };
-    conn.stream_shutdown(stream_id as u64, dir, err as u64)
-        .unwrap();
+    match conn.stream_shutdown(stream_id as u64, dir, err as u64) {
+        Ok(_) => (),
+        Err(Error::Done) => (),
+        Err(e) => panic!(e),
+    }
 }
 
 #[no_mangle]

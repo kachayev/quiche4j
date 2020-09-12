@@ -139,182 +139,183 @@ public class H3Server {
                 final DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 try {
                     socket.receive(packet);
-                    final int len = packet.getLength();
-                    // xxx(okachaiev): can we avoid doing copy here?
-                    final byte[] packetBuf = Arrays.copyOfRange(packet.getData(), 0, len);
-
-                    System.out.println("> socket.recv " + len + " bytes");
-
-                    // PARSE QUIC HEADER
-                    PacketHeader hdr;
-                    try {
-                        hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
-                        System.out.println("> packet " + hdr);
-                    } catch (Exception e) {
-                        System.out.println("! failed to parse headers " + e);
-                        continue;
-                    }
-
-                    // SIGN CONN ID
-                    final byte[] connId =  Quiche.signConnectionId(connIdSeed, hdr.getDestinationConnectionId());
-                    Client client = clients.get(Utils.asHex(hdr.getDestinationConnectionId()));
-                    if(null == client) client = clients.get(Utils.asHex(connId));
-                    if(null == client) {
-                        // CREATE CLIENT IF MISSING
-                        if(PacketType.INITIAL != hdr.getPacketType()) {
-                            System.out.println("! wrong packet type");
-                            continue;
-                        }
-
-                        // NEGOTIATE VERSION
-                        if(!Quiche.versionIsSupported(hdr.getVersion())) {
-                            System.out.println("> version negotiation");
-
-                            int negLength = 0;
-                            try {
-                                negLength = Quiche.negotiateVersion(
-                                    hdr.getSourceConnectionId(), hdr.getDestinationConnectionId(), out);
-                            } catch (Quiche.Error e) {
-                                System.out.println("! failed to negotiate version " + e.getErrorCode());
-                                System.exit(1);
-                                return;
-                            }
-                            final DatagramPacket negPacket =
-                                new DatagramPacket(out, negLength, packet.getAddress(), packet.getPort());
-                            socket.send(negPacket);
-                            continue;
-                        }
-
-                        // RETRY IF TOKEN IS EMPTY
-                        if(null == hdr.getToken()) {
-                            System.out.println("> stateless retry");
-
-                            final byte[] token = mintToken(hdr, packet.getAddress());
-                            int retryLength = 0;
-                            try {
-                                retryLength = Quiche.retry(
-                                    hdr.getSourceConnectionId(), hdr.getDestinationConnectionId(),
-                                    connId, token, hdr.getVersion(), out);
-
-                                System.out.println("> retry length " + retryLength);
-                            } catch (Quiche.Error e) {
-                                System.out.println("! retry failed " + e.getErrorCode());
-                                System.exit(1);
-                                return;
-                            }
-
-                            final DatagramPacket retryPacket =
-                                new DatagramPacket(out, retryLength, packet.getAddress(), packet.getPort());
-                            socket.send(retryPacket);
-                            continue;
-                        }
-
-                        // VALIDATE TOKEN
-                        final byte[] odcid = validateToken(packet.getAddress(), hdr.getToken());
-                        if(null == odcid) {
-                            System.out.println("! invalid address validation token");
-                            continue;
-                        }
-
-                        byte[] sourceConnId = connId;
-                        final byte[] destinationConnId = hdr.getDestinationConnectionId();
-                        if(sourceConnId.length != destinationConnId.length) {
-                            System.out.println("! invalid destination connection id");
-                            continue;
-                        }
-                        sourceConnId = destinationConnId;
-
-                        final Connection conn = Quiche.accept(sourceConnId, odcid, config);
-
-                        System.out.println("> new connection " + Utils.asHex(sourceConnId));
-
-                        client = new Client(conn);
-                        client.setSource(packet.getAddress(), packet.getPort());
-                        clients.put(Utils.asHex(sourceConnId), client);
-
-                        System.out.println("! # of clients: " + clients.size());
-                    }
-
-                    // POTENTIALLY COALESCED PACKETS
-                    final Connection conn = client.getConnection();
-                    int read;
-                    try {
-                        read = conn.recv(packetBuf);
-                    } catch (Quiche.Error e) {
-                        System.out.println("> recv failed " + e.getErrorCode());
-                        break;
-                    }
-                    if(read <= 0) break;
- 
-                    System.out.println("> conn.recv " + read + " bytes");
-                    System.out.println("> conn.established " + conn.isEstablished());
-
-                    // ESTABLISH H3 CONNECTION IF NONE
-                    H3Connection h3Conn = client.getH3Connection();
-                    if((conn.isInEarlyData() || conn.isEstablished()) && null == h3Conn) {
-                        System.out.println("> handshake done " + conn.isEstablished());
-                        try {
-                            h3Conn = H3Connection.withTransport(conn, h3Config);
-                            client.setH3Connection(h3Conn);
-
-                            System.out.println("> new H3 connection " + h3Conn);
-                        } catch (Exception e) {
-                            System.out.println("> failed to establish H3 conn " + e);
-                            continue;
-                        }
-                    }
-
-                    if(null != h3Conn) {
-                        // PROCESS WRITABLES
-                        final Client current = client;
-                        client.getConnection().writable().forEach(streamId -> {
-                            handleWritable(current, streamId);
-                        });
-
-                        // H3 POLL
-                        final List<H3Header> headers = new ArrayList<>();
-                        Long streamId = 0L;
-                        while(true) {
-                            try {
-                                streamId = h3Conn.poll(new H3PollEvent() {
-                                    public void onHeader(long streamId, String name, String value) {
-                                        // xxx(okachaiev): this won't work as expected in multi-threaded
-                                        // environment. it feels it would be reasonable to have onHeaders
-                                        // API instead of callback for each header separately
-                                        headers.add(new H3Header(name, value));
-                                        System.out.println("< got header " + name + " on " + streamId);
-                                    }
-        
-                                    public void onData(long streamId) {
-                                        System.out.println("< got data on " + streamId);
-                                    }
-        
-                                    public void onFinished(long streamId) {
-                                        System.out.println("< finished " + streamId);
-                                    }
-                                });
-                            } catch (Quiche.Error e) {
-                                System.out.println("! poll failed " + e.getErrorCode());
-
-                                // xxx(okachaiev): this should actially break from 2 loops
-                                break;
-                            }
-
-                            System.out.println("< poll " + streamId);
-                            // xxx(okachaiev): this should actially break from 2 loops
-                            if(null == streamId) break;
-
-                            if(0 < headers.size()) {
-                                handleRequest(client, streamId, headers);
-                            }
-                        }
-                    }
                 } catch (SocketTimeoutException e) {
                     // TIMERS
                     for(Client client: clients.values()) {
                         client.getConnection().onTimeout();
                     }
                     break;
+                }
+
+                final int len = packet.getLength();
+                // xxx(okachaiev): can we avoid doing copy here?
+                final byte[] packetBuf = Arrays.copyOfRange(packet.getData(), 0, len);
+
+                System.out.println("> socket.recv " + len + " bytes");
+
+                // PARSE QUIC HEADER
+                PacketHeader hdr;
+                try {
+                    hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
+                    System.out.println("> packet " + hdr);
+                } catch (Exception e) {
+                    System.out.println("! failed to parse headers " + e);
+                    continue;
+                }
+
+                // SIGN CONN ID
+                final byte[] connId =  Quiche.signConnectionId(connIdSeed, hdr.getDestinationConnectionId());
+                Client client = clients.get(Utils.asHex(hdr.getDestinationConnectionId()));
+                if(null == client) client = clients.get(Utils.asHex(connId));
+                if(null == client) {
+                    // CREATE CLIENT IF MISSING
+                    if(PacketType.INITIAL != hdr.getPacketType()) {
+                        System.out.println("! wrong packet type");
+                        continue;
+                    }
+
+                    // NEGOTIATE VERSION
+                    if(!Quiche.versionIsSupported(hdr.getVersion())) {
+                        System.out.println("> version negotiation");
+
+                        int negLength = 0;
+                        try {
+                            negLength = Quiche.negotiateVersion(
+                                hdr.getSourceConnectionId(), hdr.getDestinationConnectionId(), out);
+                        } catch (Quiche.Error e) {
+                            System.out.println("! failed to negotiate version " + e.getErrorCode());
+                            System.exit(1);
+                            return;
+                        }
+                        final DatagramPacket negPacket =
+                            new DatagramPacket(out, negLength, packet.getAddress(), packet.getPort());
+                        socket.send(negPacket);
+                        continue;
+                    }
+
+                    // RETRY IF TOKEN IS EMPTY
+                    if(null == hdr.getToken()) {
+                        System.out.println("> stateless retry");
+
+                        final byte[] token = mintToken(hdr, packet.getAddress());
+                        int retryLength = 0;
+                        try {
+                            retryLength = Quiche.retry(
+                                hdr.getSourceConnectionId(), hdr.getDestinationConnectionId(),
+                                connId, token, hdr.getVersion(), out);
+
+                            System.out.println("> retry length " + retryLength);
+                        } catch (Quiche.Error e) {
+                            System.out.println("! retry failed " + e.getErrorCode());
+                            System.exit(1);
+                            return;
+                        }
+
+                        final DatagramPacket retryPacket =
+                            new DatagramPacket(out, retryLength, packet.getAddress(), packet.getPort());
+                        socket.send(retryPacket);
+                        continue;
+                    }
+
+                    // VALIDATE TOKEN
+                    final byte[] odcid = validateToken(packet.getAddress(), hdr.getToken());
+                    if(null == odcid) {
+                        System.out.println("! invalid address validation token");
+                        continue;
+                    }
+
+                    byte[] sourceConnId = connId;
+                    final byte[] destinationConnId = hdr.getDestinationConnectionId();
+                    if(sourceConnId.length != destinationConnId.length) {
+                        System.out.println("! invalid destination connection id");
+                        continue;
+                    }
+                    sourceConnId = destinationConnId;
+
+                    final Connection conn = Quiche.accept(sourceConnId, odcid, config);
+
+                    System.out.println("> new connection " + Utils.asHex(sourceConnId));
+
+                    client = new Client(conn);
+                    client.setSource(packet.getAddress(), packet.getPort());
+                    clients.put(Utils.asHex(sourceConnId), client);
+
+                    System.out.println("! # of clients: " + clients.size());
+                }
+
+                // POTENTIALLY COALESCED PACKETS
+                final Connection conn = client.getConnection();
+                int read;
+                try {
+                    read = conn.recv(packetBuf);
+                } catch (Quiche.Error e) {
+                    System.out.println("> recv failed " + e.getErrorCode());
+                    break;
+                }
+                if(read <= 0) break;
+
+                System.out.println("> conn.recv " + read + " bytes");
+                System.out.println("> conn.established " + conn.isEstablished());
+
+                // ESTABLISH H3 CONNECTION IF NONE
+                H3Connection h3Conn = client.getH3Connection();
+                if((conn.isInEarlyData() || conn.isEstablished()) && null == h3Conn) {
+                    System.out.println("> handshake done " + conn.isEstablished());
+                    try {
+                        h3Conn = H3Connection.withTransport(conn, h3Config);
+                        client.setH3Connection(h3Conn);
+
+                        System.out.println("> new H3 connection " + h3Conn);
+                    } catch (Exception e) {
+                        System.out.println("> failed to establish H3 conn " + e);
+                        continue;
+                    }
+                }
+
+                if(null != h3Conn) {
+                    // PROCESS WRITABLES
+                    final Client current = client;
+                    client.getConnection().writable().forEach(streamId -> {
+                        handleWritable(current, streamId);
+                    });
+
+                    // H3 POLL
+                    final List<H3Header> headers = new ArrayList<>();
+                    Long streamId = 0L;
+                    while(true) {
+                        try {
+                            streamId = h3Conn.poll(new H3PollEvent() {
+                                public void onHeader(long streamId, String name, String value) {
+                                    // xxx(okachaiev): this won't work as expected in multi-threaded
+                                    // environment. it feels it would be reasonable to have onHeaders
+                                    // API instead of callback for each header separately
+                                    headers.add(new H3Header(name, value));
+                                    System.out.println("< got header " + name + " on " + streamId);
+                                }
+    
+                                public void onData(long streamId) {
+                                    System.out.println("< got data on " + streamId);
+                                }
+    
+                                public void onFinished(long streamId) {
+                                    System.out.println("< finished " + streamId);
+                                }
+                            });
+                        } catch (Quiche.Error e) {
+                            System.out.println("! poll failed " + e.getErrorCode());
+
+                            // xxx(okachaiev): this should actially break from 2 loops
+                            break;
+                        }
+
+                        System.out.println("< poll " + streamId);
+                        // xxx(okachaiev): this should actially break from 2 loops
+                        if(null == streamId) break;
+
+                        if(0 < headers.size()) {
+                            handleRequest(client, streamId, headers);
+                        }
+                    }
                 }
             }
 
