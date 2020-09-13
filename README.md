@@ -6,24 +6,38 @@ The library provides thin Java API layer on top of JNI calls to [quiche](https:/
 
 The main goal of the JNI bindings is to ensure high-performance and flexibility for the application developers while maintaining full access to `quiche` library features. Specifically, the bindings layer tries to ensure zero-copy data trasfer between runtimes where possible and perform minimum allocations on Java side.
 
-## Run Examples
+## Building
 
-Build the package:
+`Quiche4j` requires Rust 1.39+ to build. The latest stable Rust release can be installed using [rustup](https://rustup.rs/). Once the Rust build environment is setup,
 
-```shell
-$ mvn package
+```bash
+$ git clone https://github.com/kachayev/quiche4j
+$ cargo build --release --manifest-path quiche4j-jni/Cargo.toml
+$ mvn clean install
+$ java -Djava.library.path=quiche4j-jni/target/release/ -cp target/quiche4j-0.2.0-SNAPSHOT.jar io.quiche4j.examples.H3Server
 ```
+
+For cross-compilation options, see `cargo build` [documentation](https://doc.rust-lang.org/cargo/commands/cargo-build.html).
+
+## Run Examples
 
 Run HTTP3 client example:
 
-```shell
-$ ./h3-client.sh http://quic.tech:8443
+```bash
+$ ./h3-client.sh https://quic.tech:8443
+> sending request to https://quic.tech:8443
+> handshake size: 1200
+> socket.recieve 167 bytes
+> conn.recv 167 bytes
+...
+! conn is closed recv=10 sent=12 lost=0 rtt=95 cwnd=14520 delivery_rate=1436
 ```
 
 Run HTTP3 server example:
 
-```shell
+```bash
 $ ./h3-server.sh :4433
+! listening on localhost:4433
 ```
 
 ## API
@@ -216,20 +230,18 @@ Have a look at the `src/main/java/io/quiche4j/examples/` folder for more complet
 
 ## Implementation Details
 
-* `Native.java` contains definition of native calls.
+* Module [Native.java](src/main/java/io/quiche4j/Native.java) contains definition of all native calls
 
-* JNI calls are implmeneted in Rust (see `src/main/rust/quiche_jni/` for more details) using `rust-jni` library.
+* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using `rust-jni` library
 
-* Most Java objects maintain a handle to corresponding Rust struct to maximise compatability with all Quiche features 
+* Proxy Java objects maintain a handle to corresponding Rust struct to maximise compatability with all `quiche` features 
 
 ## TODO
 
-- [ ] Better build script to provide linking for different platforms, optimized Rust build instead of debug
 - [ ] Documentation (like... a lot)
 - [ ] Propagate Rust panics into Java exceptions, think twice about error codes vs. throwables
 - [ ] All "xxx" comments both from Java and Rust code
-- [ ] Public maven and crate artifacts
-- [ ] Organize examples code
+- [ ] Public Maven and Cargo artifacts, generate JAR with os-dependent classifiers
 
 ## Copyright
 

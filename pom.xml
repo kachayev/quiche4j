@@ -1,17 +1,25 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.quiche4j</groupId>
   <artifactId>quiche4j</artifactId>
-  <packaging>jar</packaging>
-  <version>0.1.0-SNAPSHOT</version>
-  <name>Quiche4j</name>
+  <packaging>pom</packaging>
+  <version>0.2.0-SNAPSHOT</version>
+  <name>quiche4j</name>
   <url>https://github.com/kachayev/quiche4j</url>
+  <developers>
+    <developer>
+      <id>https://github.com/kachayev</id>
+      <name>Oleksii Kachaiev</name>
+    </developer>
+  </developers>
+  <modules>
+    <module>quiche4j-core</module>
+    <module>quiche4j-examples</module>
+  </modules>
   <properties>
-    <build.mode>release</build.mode>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <build.cargoFlag></build.cargoFlag>
   </properties>
   <dependencies>
     <dependency>
@@ -22,22 +30,13 @@
     </dependency>
   </dependencies>
   <build>
-    <resources>
-      <resource>
-          <directory>src/main/resources</directory>
-          <excludes>
-              <exclude>**/*.md</exclude>
-              <exclude>**/*.h</exclude>
-              <exclude>**/*.lib</exclude>
-          </excludes>
-      </resource>
-      <resource>
-        <directory>target/</directory>
-        <includes>
-          <include>NATIVE/**/*.*</include>
-        </includes>
-      </resource>
-  </resources>    
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.6.1</version>
+      </extension>
+    </extensions>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -51,70 +50,8 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
-        <configuration>
-          <executable>cargo</executable>
-          <workingDirectory>${project.basedir}/src/main/rust/quiche_jni/</workingDirectory>
-        </configuration>
-        <executions>
-          <execution>
-            <id>build-rust-lib</id>
-            <phase>compile</phase>
-            <configuration>
-              <arguments>
-                <argument>build</argument>
-                <argument>--${build.mode}</argument>
-                <argument>--color</argument>
-                <argument>always</argument>
-              </arguments>
-            </configuration>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-        </executions>
+        <version>3.0.0</version>
       </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <!--We need to copy quiche_jni dynamic library to the /lib/native directory-->
-          <execution>
-            <id>copy-native-lib</id>
-            <phase>package</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/NATIVE/macosx_x86_64/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/rust/quiche_jni/target/${build.mode}</directory>
-                  <includes>
-                    <include>libquiche_jni.so</include>
-                    <include>libquiche_jni.dylib</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.1.0</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <classpathPrefix>lib/</classpathPrefix>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>      
     </plugins>
   </build>
 </project>

@@ -7,5 +7,5 @@
 *.h
 *.class
 target/*
-src/main/rust/quiche_jni/target/
+*/target/*
 Cargo.lock
