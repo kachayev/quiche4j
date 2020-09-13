@@ -115,8 +115,8 @@ public class H3Server {
 
         config.verityPeer(false);
         // xxx(okachaiev): get filepath from JAR
-        config.loadCertChainFromPemFile("examples/cert.crt");
-        config.loadPrivKeyFromPemFile("examples/cert.key");
+        // config.loadCertChainFromPemFile("examples/cert.crt");
+        // config.loadPrivKeyFromPemFile("examples/cert.key");
         config.setMaxIdleTimeout(5_000);
         config.setMaxUdpPayloadSize(MAX_DATAGRAM_SIZE);
         config.setInitialMaxData(10_000_000);

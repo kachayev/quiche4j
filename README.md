@@ -14,7 +14,10 @@ The main goal of the JNI bindings is to ensure high-performance and flexibility 
 $ git clone https://github.com/kachayev/quiche4j
 $ cargo build --release --manifest-path quiche4j-jni/Cargo.toml
 $ mvn clean install
-$ java -Djava.library.path=quiche4j-jni/target/release/ -cp target/quiche4j-0.2.0-SNAPSHOT.jar io.quiche4j.examples.H3Server
+$ java \
+    -Djava.library.path=quiche4j-jni/target/release/ \
+    -cp quiche4j-examples/target/quiche4j-examples-0.2.0-SNAPSHOT.jar \
+    io.quiche4j.examples.H3Server
 ```
 
 For cross-compilation options, see `cargo build` [documentation](https://doc.rust-lang.org/cargo/commands/cargo-build.html).
@@ -24,7 +27,7 @@ For cross-compilation options, see `cargo build` [documentation](https://doc.rus
 Run HTTP3 client example:
 
 ```bash
-$ ./h3-client.sh https://quic.tech:8443
+$ ./http3-client.sh https://quic.tech:8443
 > sending request to https://quic.tech:8443
 > handshake size: 1200
 > socket.recieve 167 bytes
@@ -36,7 +39,7 @@ $ ./h3-client.sh https://quic.tech:8443
 Run HTTP3 server example:
 
 ```bash
-$ ./h3-server.sh :4433
+$ ./http3-server.sh :4433
 ! listening on localhost:4433
 ```
 
@@ -226,7 +229,7 @@ Note that `poll` would either execute callbacks and returns immediately. If ther
 
 ### Examples
 
-Have a look at the `src/main/java/io/quiche4j/examples/` folder for more complete examples on how to use the Quiche4j API to work with HTTP/3 protocol.
+Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche4j/examples/) folder for more complete examples on how to use the Quiche4j API to work with HTTP/3 protocol.
 
 ## Implementation Details
 

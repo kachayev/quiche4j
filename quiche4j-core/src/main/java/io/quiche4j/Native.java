@@ -7,15 +7,12 @@ public final class Native {
 	private final static String LIBRARY_NAME = "quiche_jni";
 
 	static {
-        System.out.println("native loader: " + System.getProperty("java.library.path"));
-
 		// try to load from "java.library.path" location first
 		// to allow user to overwrite the library when necessary.
 		// when failed, tries to load it from NATIVES folder in the JAR
 		try {
 			System.loadLibrary(LIBRARY_NAME);
 		} catch (java.lang.UnsatisfiedLinkError e) {
-			System.out.println("native loader: " + e.getMessage());
 			NativeUtils.loadEmbeddedLibrary(LIBRARY_NAME);
 		}
 	}
