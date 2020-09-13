@@ -6,7 +6,7 @@ public final class Native {
 
 	protected final static Cleaner CLEANER = Cleaner.create(); 
 
-	public static interface H3PollEvent {
+	public static interface PollEvent {
 		void onHeader(long streamId, String name, String value);
 		void onData(long streamId);
 		void onFinished(long streamId);
