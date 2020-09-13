@@ -12,15 +12,22 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class Quiche {
 
+    // The maximum length of a connection ID.
     public static final int MAX_CONN_ID_LEN = 20;
+
     public static final String CONN_ID_SEED_ALGO = "HMACSHA256";
 
     public static long ERROR_CODE_DONE = -1L;
     public static long SUCCESS_CODE = 0L;
 
+    // Supported QUIC versions.
+    //
+    // Note that the older ones might not be fully supported.
     public static final int PROTOCOL_VERSION_DRAFT27 = 0xff00_001b;
     public static final int PROTOCOL_VERSION_DRAFT28 = 0xff00_001c;
     public static final int PROTOCOL_VERSION_DRAFT29 = 0xff00_001d;
+
+    // The current QUIC wire version.
     public static final int PROTOCOL_VERSION = PROTOCOL_VERSION_DRAFT29;
 
     public static final byte[] H3_APPLICATION_PROTOCOL = "\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();

@@ -41,7 +41,7 @@ On the client-side the `Quiche.connect` utility function can be used to create a
 ```java
 // client
 final byte[] connId = Quiche.newConnectionId();
-final Connection conn = Quiche.connect(uri.getHost(), connId, config);
+final Connection conn = Quiche.connect("quic.tech", connId, config);
 
 // server
 final Connection conn = Quiche.accept(sourceConnId, originalDestinationId, config);
@@ -225,10 +225,11 @@ Have a look at the `src/main/java/io/quiche4j/examples/` folder for more complet
 ## TODO
 
 - [ ] Better build script to provide linking for different platforms, optimized Rust build instead of debug
-- [ ] Organize examples code
 - [ ] Documentation (like... a lot)
 - [ ] Propagate Rust panics into Java exceptions, think twice about error codes vs. throwables
 - [ ] All "xxx" comments both from Java and Rust code
+- [ ] Public maven and crate artifacts
+- [ ] Organize examples code
 
 ## Copyright
 
