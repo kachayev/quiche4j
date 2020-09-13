@@ -460,6 +460,34 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1close(
 
 #[no_mangle]
 #[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1timeout_1as_1nanos(
+    _env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+) -> jlong {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    match conn.timeout() {
+        Some(timeout) => timeout.as_nanos() as jlong,
+        None => std::u64::MAX as jlong,
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1timeout_1as_1millis(
+    _env: JNIEnv,
+    _class: JClass,
+    conn_ptr: jlong,
+) -> jlong {
+    let conn = unsafe { &mut *(conn_ptr as *mut Connection) };
+    match conn.timeout() {
+        Some(timeout) => timeout.as_millis() as jlong,
+        None => std::u64::MAX as jlong,
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
 pub extern "system" fn Java_io_quiche4j_Native_quiche_1conn_1on_1timeout(
     _env: JNIEnv,
     _class: JClass,

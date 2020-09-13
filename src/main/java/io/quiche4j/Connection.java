@@ -40,6 +40,14 @@ public class Connection {
         return recv;
     }
 
+    public final long timeoutAsNanos() {
+        return Native.quiche_conn_timeout_as_nanos(getPointer());
+    }
+
+    public final long timeoutAsMillis() {
+        return Native.quiche_conn_timeout_as_millis(getPointer());
+    }
+
     public final void onTimeout() {
         Native.quiche_conn_on_timeout(getPointer());
     }

@@ -83,6 +83,10 @@ public final class Native {
 
 	public final static native int quiche_conn_close(long conn_ptr, boolean app, long err, byte[] reason);
 
+	public final static native long quiche_conn_timeout_as_nanos(long conn_ptr);
+
+	public final static native long quiche_conn_timeout_as_millis(long conn_ptr);
+
 	public final static native void quiche_conn_on_timeout(long conn_ptr);
 
 	public final static native boolean quiche_conn_is_established(long conn_ptr);
