@@ -4,6 +4,19 @@ import java.lang.ref.Cleaner;
 
 public final class Native {
 
+	private final static String LIBRARY_NAME = "quiche_jni";
+
+	static {
+		// try to load from "java.library.path" location first
+		// to allow user to overwrite the library when necessary.
+		// when failed, tries to load it from NATIVES folder in the JAR
+		try {
+			System.loadLibrary(LIBRARY_NAME);
+		} catch (java.lang.UnsatisfiedLinkError e) {
+			NativeUtils.loadEmbeddedLibrary(LIBRARY_NAME);
+		}
+	}
+
 	protected final static Cleaner CLEANER = Cleaner.create(); 
 
 	public static interface PollEvent {
@@ -142,8 +155,4 @@ public final class Native {
 	// PACKET
 
 	public final static native void quiche_header_from_slice(byte[] buf, int dcid_len, PacketHeader holder);
-
-	static {
-		System.loadLibrary("quiche_jni");
-	}
 }

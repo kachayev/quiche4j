@@ -8,13 +8,9 @@
   <name>Quiche4j</name>
   <url>https://github.com/kachayev/quiche4j</url>
   <properties>
-    <build.mode>debug</build.mode>
-    <project.build.headersDirectory>${project.build.directory}/${build.mode}/lib/native-headers</project.build.headersDirectory>
+    <build.mode>release</build.mode>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <build.nativeLibPath>${project.build.directory}/${build.mode}/lib</build.nativeLibPath>
-    <packaging.native>${project.build.directory}/${build.mode}/lib</packaging.native>
-    <skipRustLibBuild>false</skipRustLibBuild>
     <build.cargoFlag></build.cargoFlag>
   </properties>
   <dependencies>
@@ -35,6 +31,12 @@
               <exclude>**/*.lib</exclude>
           </excludes>
       </resource>
+      <resource>
+        <directory>target/</directory>
+        <includes>
+          <include>NATIVE/**/*.*</include>
+        </includes>
+      </resource>
   </resources>    
     <plugins>
       <plugin>
@@ -50,23 +52,21 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.6.0</version>
-        <!-- A configuration shared across multiple executions -->
         <configuration>
           <executable>cargo</executable>
           <workingDirectory>${project.basedir}/src/main/rust/quiche_jni/</workingDirectory>
         </configuration>
         <executions>
           <execution>
-            <id>build-rust-lib-for-tests</id>
+            <id>build-rust-lib</id>
             <phase>compile</phase>
             <configuration>
               <arguments>
                 <argument>build</argument>
-                <argument>--release</argument>
+                <argument>--${build.mode}</argument>
                 <argument>--color</argument>
                 <argument>always</argument>
               </arguments>
-              <skip>${skipRustLibBuild}</skip>
             </configuration>
             <goals>
               <goal>exec</goal>
@@ -87,10 +87,10 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${packaging.native}</outputDirectory>
+              <outputDirectory>${project.build.directory}/NATIVE/macosx_x86_64/</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${build.nativeLibPath}</directory>
+                  <directory>${project.basedir}/src/main/rust/quiche_jni/target/${build.mode}</directory>
                   <includes>
                     <include>libquiche_jni.so</include>
                     <include>libquiche_jni.dylib</include>
