@@ -83,6 +83,10 @@ public class H3Server {
     private static final byte[] SERVER_NAME_BYTES = SERVER_NAME.getBytes();
     private static final int SERVER_NAME_BYTES_LEN = SERVER_NAME_BYTES.length;
 
+    private static final String HEADER_NAME_STATUS = ":status";
+    private static final String HEADER_NAME_SERVER = "server";
+    private static final String HEADER_NAME_CONTENT_LENGTH = "content-length";
+
     public static void main(String[] args) throws IOException {
         String hostname = "localhost";
         int port = 4433;
@@ -398,9 +402,9 @@ public class H3Server {
 
         final byte[] body = "Hello world".getBytes();
         final List<H3Header> headers = new ArrayList<>();
-        headers.add(new H3Header(":status", "200"));
-        headers.add(new H3Header("server", SERVER_NAME));
-        headers.add(new H3Header("content-length", Integer.toString(body.length)));
+        headers.add(new H3Header(HEADER_NAME_STATUS, "200"));
+        headers.add(new H3Header(HEADER_NAME_SERVER, SERVER_NAME));
+        headers.add(new H3Header(HEADER_NAME_CONTENT_LENGTH, Integer.toString(body.length)));
 
         try {
             if(!h3Conn.sendResponse(streamId, headers, false)) {

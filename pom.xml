@@ -62,6 +62,7 @@
             <configuration>
               <arguments>
                 <argument>build</argument>
+                <argument>--release</argument>
                 <argument>--color</argument>
                 <argument>always</argument>
               </arguments>

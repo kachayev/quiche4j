@@ -1,6 +1,6 @@
 [package]
 name = "quiche-jni"
-version = "1.0.0"
+version = "0.1.0"
 authors = ["Oleksii Kachaiev"]
 edition = "2018"
 
