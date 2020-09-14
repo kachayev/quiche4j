@@ -1,6 +1,10 @@
 package io.quiche4j.examples;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -114,9 +118,8 @@ public class H3Server {
         }
 
         config.verityPeer(false);
-        // xxx(okachaiev): get filepath from JAR
-        // config.loadCertChainFromPemFile("examples/cert.crt");
-        // config.loadPrivKeyFromPemFile("examples/cert.key");
+        config.loadCertChainFromPemFile(copyFileFromJAR("/cert.crt"));
+        config.loadPrivKeyFromPemFile(copyFileFromJAR("/cert.key"));
         config.setMaxIdleTimeout(5_000);
         config.setMaxUdpPayloadSize(MAX_DATAGRAM_SIZE);
         config.setInitialMaxData(10_000_000);
@@ -470,6 +473,26 @@ public class H3Server {
         resp.written += written;
         if(resp.written < resp.body.length) {
             client.partialResponses.remove(streamId);
+        }
+    }
+
+    private static final String copyFileFromJAR(String filepath) throws IOException {
+        try(final InputStream fileStream = H3Server.class.getResourceAsStream(filepath)) {
+            if(fileStream == null) return null;
+
+            final File temp = File.createTempFile("certs", "temp");
+            temp.deleteOnExit();
+    
+            try(final OutputStream out = new FileOutputStream(temp)) {
+                final byte[] buffer = new byte[1024];
+                int len = fileStream.read(buffer);
+                while (len != -1) {
+                    out.write(buffer, 0, len);
+                    len = fileStream.read(buffer);
+                }
+            }
+    
+            return temp.getAbsolutePath();
         }
     }
 
