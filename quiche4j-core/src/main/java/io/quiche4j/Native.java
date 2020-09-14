@@ -9,7 +9,7 @@ public final class Native {
 	static {
 		// try to load from "java.library.path" location first
 		// to allow user to overwrite the library when necessary.
-		// when failed, tries to load it from NATIVES folder in the JAR
+		// when failed, tries to load it from /native-libs/ folder in the JAR
 		try {
 			System.loadLibrary(LIBRARY_NAME);
 		} catch (java.lang.UnsatisfiedLinkError e) {

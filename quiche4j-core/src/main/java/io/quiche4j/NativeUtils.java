@@ -10,53 +10,34 @@ import java.net.URL;
 
 class NativeUtils {
 
+    private static final String DEFAUL_DIR = "/native-libs/";
+
     private static final String[] ALLOWED_EXTENTIONS = new String[]{"so", "dylib", "dll"};
 
-    private static String getCurrentPlatformIdentifier() {
-        String os = System.getProperty("os.name");
-        if (os.toLowerCase().contains("windows")) {
-            os = "windown";
-        } else if (os.toLowerCase().contains("mac os x")) {
-            os = "macosx";
-        } else {
-            os = os.replaceAll("\\s+", "_");
-        }
-        return os + "_" + System.getProperty("os.arch");
+    protected static void loadEmbeddedLibrary(String libname) {
+        loadEmbeddedLibrary(DEFAUL_DIR, libname);
     }
 
-    protected static void loadEmbeddedLibrary(String libname) {
+    protected static void loadEmbeddedLibrary(String dir, String libname) {
         final String filename = "lib" + libname;
 
-        // attempt to locate embedded native library within JAR at following location:
-        // /NATIVE/${os.name}_${os.arch}/libquiche_jni.[so|dylib|dll]
-        final StringBuilder url = new StringBuilder();
-        url.append("/NATIVE/");
-        url.append(getCurrentPlatformIdentifier()).append("/");
-
-        URL nativeLibraryUrl = null;
-        for(String ext: ALLOWED_EXTENTIONS) {
-            nativeLibraryUrl = Quiche.class.getResource(url.toString() + filename + "." + ext);
-            if (nativeLibraryUrl != null) break;
+        String nativeLibraryFilepath = null;
+        for (String ext: ALLOWED_EXTENTIONS) {
+            final String filepath = dir + filename + "." + ext;
+            final URL url = Quiche.class.getResource(filepath);
+            if (url != null) {
+                nativeLibraryFilepath = filepath;
+                break;
+            }
         }
 
-        if (nativeLibraryUrl != null) {
+        if (nativeLibraryFilepath != null) {
             // native library found within JAR, extract and load
             try {
-                final File libfile = File.createTempFile(filename, ".lib");
-                libfile.deleteOnExit(); // just in case
-
-                final InputStream in = nativeLibraryUrl.openStream();
-                final OutputStream out = new BufferedOutputStream(new FileOutputStream(libfile));
-
-                int len = 0;
-                byte[] buffer = new byte[8192];
-                while ((len = in.read(buffer)) > -1)
-                    out.write(buffer, 0, len);
-                out.close();
-                in.close();
-                System.load(libfile.getAbsolutePath());
+                final String libfile = Utils.copyFileFromJAR("libs", nativeLibraryFilepath);
+                System.load(libfile);
             } catch (IOException e) {
-                // mission failed, do nothing
+                // no-op
             }
         }
     }

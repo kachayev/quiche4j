@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.quiche4j</groupId>
+        <artifactId>quiche4j</artifactId>
+        <version>0.2.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>quiche4j-jni</artifactId>
+    <packaging>jar</packaging>
+    <name>Quiche4j/JNI</name>
+
+    <properties>
+        <exec.executable>cargo</exec.executable>
+        <native.buildMode>release</native.buildMode>
+        <native.targetDir>target</native.targetDir>
+        <jni.classifier>${os.detected.classifier}</jni.classifier>
+        <nativeIncludeDir>${project.basedir}/src</nativeIncludeDir>
+        <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
+        <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
+        <defaultJarFile>${project.build.directory}/${project.build.finalName}.jar</defaultJarFile>
+        <nativeJarFile>${project.build.directory}/${project.build.finalName}-${jni.classifier}.jar</nativeJarFile>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <!-- Build the additional JAR that contains the native library. -->
+                    <execution>
+                        <id>native-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <copy todir="${nativeJarWorkdir}">
+                                    <zipfileset src="${defaultJarFile}" />
+                                </copy>
+                                <copy todir="${nativeJarWorkdir}/native-libs/" includeEmptyDirs="false">
+                                    <zipfileset dir="${nativeLibOnlyDir}" />
+                                </copy>
+                                <copy todir="${nativeJarWorkdir}/source/" includeEmptyDirs="false">
+                                    <zipfileset dir="${nativeIncludeDir}" />
+                                </copy>
+                                <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                                <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- build a static library -->
+                    <execution>
+                        <id>build-native-lib</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <exec executable="${exec.executable}" failonerror="true" resolveexecutable="false">
+                                    <arg line="build --lib --${native.buildMode} --color always --target-dir ${native.targetDir} --out-dir ${nativeLibOnlyDir} -Z unstable-options" />
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

@@ -6,21 +6,56 @@ The library provides thin Java API layer on top of JNI calls to [quiche](https:/
 
 The main goal of the JNI bindings is to ensure high-performance and flexibility for the application developers while maintaining full access to `quiche` library features. Specifically, the bindings layer tries to ensure zero-copy data trasfer between runtimes where possible and perform minimum allocations on Java side.
 
+## Usage
+
+Maven:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.quiche4j</groupId>
+        <artifactId>quiche4j-core</artifactId>
+        <version>0.2.0</version>
+    </dependency>
+    <dependency>
+        <groupId>io.quiche4j</groupId>
+        <artifactId>quiche4j-jni</artifactId>
+        <classifier>linux_x64_86</classifier>
+        <version>0.2.0</version>
+    </dependency>
+</dependencies>
+```
+
+Note that `quiche4j-jni` contains native library and should be installed with proper classifier. [`os-maven-plugin`](https://github.com/trustin/os-maven-plugin) could be used to simplify classifier detection
+
+```xml
+<build>
+    <extensions>
+        <extension>
+            <groupId>kr.motd.maven</groupId>
+            <artifactId>os-maven-plugin</artifactId>
+            <version>1.6.1</version>
+        </extension>
+    </extensions>
+</build>
+<dependencies>
+    <dependency>
+        <groupId>io.quiche4j</groupId>
+        <artifactId>quiche4j-jni</artifactId>
+        <classifier>${os.detected.classifier}</classifier>
+        <version>0.2.0</version>
+    </dependency>
+</dependencies>
+```
+
 ## Building
 
-`Quiche4j` requires Rust 1.39+ to build. The latest stable Rust release can be installed using [rustup](https://rustup.rs/). Once the Rust build environment is setup,
+`Quiche4j` requires `cargo` and Rust 1.39+ to build. The latest stable Rust release can be installed using [rustup](https://rustup.rs/). Once the Rust build environment is setup,
 
 ```bash
 $ git clone https://github.com/kachayev/quiche4j
-$ cargo build --release --manifest-path quiche4j-jni/Cargo.toml
 $ mvn clean install
-$ java \
-    -Djava.library.path=quiche4j-jni/target/release/ \
-    -cp quiche4j-examples/target/quiche4j-examples-0.2.0-SNAPSHOT.jar \
-    io.quiche4j.examples.H3Server
 ```
-
-For cross-compilation options, see `cargo build` [documentation](https://doc.rust-lang.org/cargo/commands/cargo-build.html).
 
 ## Run Examples
 
@@ -42,6 +77,24 @@ Run HTTP3 server example:
 $ ./http3-server.sh :4433
 ! listening on localhost:4433
 ```
+
+## Compile Manually
+
+Maven project is setup to automatically compile JNI library and include the result of the compilation into the `quiche4j-jni` JAR. Even thought this method is convenient for distribution, it might lack flexibility. To compile JNI manually follow the next steps,
+
+```bash
+$ git clone https://github.com/kachayev/quiche4j
+$ cargo build --release --manifest-path quiche4j-jni/Cargo.toml
+$ mvn clean install
+$ java \
+    -Djava.library.path=quiche4j-jni/target/release/ \
+    -cp quiche4j-examples/target/quiche4j-examples-0.2.0-SNAPSHOT.jar \
+    io.quiche4j.examples.H3Server
+```
+
+The code would try to load native libraries from `java.library.path` first, using built-in artifact as a fallback only.
+
+For cross-compilation options, see `cargo build` [documentation](https://doc.rust-lang.org/cargo/commands/cargo-build.html).
 
 ## API
 
@@ -235,7 +288,7 @@ Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche
 
 * Module [Native.java](src/main/java/io/quiche4j/Native.java) contains definition of all native calls
 
-* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using `rust-jni` library
+* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using [`rust-jni`](https://docs.rs/jni/0.17.0/jni/) library
 
 * Proxy Java objects maintain a handle to corresponding Rust struct to maximise compatability with all `quiche` features 
 
