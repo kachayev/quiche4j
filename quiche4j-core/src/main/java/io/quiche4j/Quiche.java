@@ -4,11 +4,11 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Random;
-
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
 
 public final class Quiche {
 
@@ -18,6 +18,7 @@ public final class Quiche {
     public static final String CONN_ID_SEED_ALGO = "HMACSHA256";
 
     public static long ERROR_CODE_DONE = -1L;
+    public static long ERROR_CODE_H3_STREAM_BLOCKED = -13L;
     public static long SUCCESS_CODE = 0L;
 
     // Supported QUIC versions.
@@ -46,23 +47,6 @@ public final class Quiche {
             return this.value;
         }
     }
-
-    // xxx(okachaiev): can we get advantage by caching instances?
-    // xxx(okachaiev): should we even use Throwables here? dealing with
-    // error codes would not be Java-style at all but it would safe us
-    // from paying performance penalties
-	public static class Error extends Exception {
-		private final int errorCode;
-		
-		public Error(int errorCode) {
-			super();
-			this.errorCode = errorCode;
-		}
-
-		public final int getErrorCode() {
-			return this.errorCode;
-		}
-	}
 
     public static final byte[] newConnectionId() {
         return newConnectionId(new Random());
@@ -98,10 +82,8 @@ public final class Quiche {
     }
 
     public static final int negotiateVersion(
-            byte[] sourceConnId, byte[] destinationConnId, byte[] buf) throws Error {
-        final int len = Native.quiche_negotiate_version(sourceConnId, destinationConnId, buf);
-        if(len < 0) throw new Error(len);
-        return len;
+            byte[] sourceConnId, byte[] destinationConnId, byte[] buf) {
+        return Native.quiche_negotiate_version(sourceConnId, destinationConnId, buf);
     }
 
     public static final boolean versionIsSupported(int version) {
@@ -110,10 +92,8 @@ public final class Quiche {
 
     public static final int retry(
             byte[] sourceConnId, byte[] destinationConnId, byte[] newSourceConnId,
-            byte[] token, int version, byte[] buf) throws Error {
-        final int len = Native.quiche_retry(sourceConnId, destinationConnId, newSourceConnId, token, version, buf);
-        if(len < 0) throw new Error(len);
-        return len;
+            byte[] token, int version, byte[] buf) {
+        return Native.quiche_retry(sourceConnId, destinationConnId, newSourceConnId, token, version, buf);
     }
 
     public static final Connection accept(byte[] scid, byte[] odcid, Config config) {

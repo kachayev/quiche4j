@@ -1,5 +1,6 @@
 package io.quiche4j.examples;
 
+import io.quiche4j.ConfigError;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -52,7 +53,7 @@ public class H3Client {
 
         try {
             config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
-        } catch (Quiche.Error e) {
+        } catch (ConfigError e) {
             System.out.println("! wrong protocol " + e.getErrorCode());
             System.exit(1);
             return;
@@ -75,10 +76,9 @@ public class H3Client {
 
         int len = 0;
         final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
-        try {
-            len = conn.send(buffer);
-        } catch (Quiche.Error e) {
-            System.out.println("! handshake init problem " + e.getErrorCode());
+        len = conn.send(buffer);
+        if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+            System.out.println("! handshake init problem " + len);
             System.exit(1);
             return;
         }
@@ -108,50 +108,51 @@ public class H3Client {
                     // xxx(okachaiev): if we extend `recv` API to with optional buf len,
                     // we could avoid Arrays.copy here
                     final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
+                    if (read < 0 && read != Quiche.ERROR_CODE_DONE) {
+                        System.out.println("> conn.recv failed " + read);
 
-                    System.out.println("> conn.recv " + read + " bytes");
+                        reading.set(false);
+                    } else {
+                        System.out.println("> conn.recv " + read + " bytes");
+                    }
                 } catch (SocketTimeoutException e) {
                     conn.onTimeout();
-                    reading.set(false);
-                } catch (Quiche.Error e) {
-                    System.out.println("> conn.recv failed " + e.getErrorCode());
-
                     reading.set(false);
                 }
 
                 // POLL
                 if(null != h3Conn) {
-                    try {
-                        final H3Connection h3c = h3Conn;
-                        streamId = h3Conn.poll(new H3PollEvent() {
-                            public void onHeader(long _streamId, String name, String value) {
-                                System.out.println(name + ": " + value);
-                            }
+                    final H3Connection h3c = h3Conn;
+                    streamId = h3c.poll(new H3PollEvent() {
+                        public void onHeader(long _streamId, String name, String value) {
+                            System.out.println(name + ": " + value);
+                        }
 
-                            public void onData(long streamId) {
-                                try {
-                                    final int bodyLength = h3c.recvBody(streamId, buffer);
-                                    System.out.println("< got body " + bodyLength + " bytes for " + streamId);
-                                    final byte[] body = Arrays.copyOfRange(buffer, 0, bodyLength);
-                                    System.out.println(new String(body, StandardCharsets.UTF_8));
-                                } catch (Quiche.Error e) {
-                                    System.out.println("> recv body failed " + e.getErrorCode());
-                                }
+                        public void onData(long streamId) {
+                            final int bodyLength = h3c.recvBody(streamId, buffer);
+                            if (bodyLength < 0 && bodyLength != Quiche.ERROR_CODE_DONE) {
+                                System.out.println("! recv body failed " + bodyLength);
+                            } else {
+                                System.out.println("< got body " + bodyLength + " bytes for " + streamId);
+                                final byte[] body = Arrays.copyOfRange(buffer, 0, bodyLength);
+                                System.out.println(new String(body, StandardCharsets.UTF_8));
                             }
+                        }
 
-                            public void onFinished(long streamId) {
-                                System.out.println("> response finished");
-                                System.out.println("> close code " + conn.close(true, 0x00, "kthxbye"));
-                                reading.set(false);
-                            }
-                        });
-                    } catch (Quiche.Error e) {
-                        System.out.println("> poll failed " + e.getErrorCode());
+                        public void onFinished(long streamId) {
+                            System.out.println("> response finished");
+                            System.out.println("> close code " + conn.close(true, 0x00, "kthxbye"));
+                            reading.set(false);
+                        }
+                    });
+
+                    if (streamId < 0 && streamId != Quiche.ERROR_CODE_DONE) {
+                        System.out.println("> poll failed " + streamId);
                         reading.set(false);
                         break;
                     }
 
-                    if(null == streamId) reading.set(false);
+                    if(Quiche.ERROR_CODE_DONE == streamId) reading.set(false);
                 }
             }
 
@@ -180,10 +181,9 @@ public class H3Client {
 
             // WRITING LOOP
             while(true) {
-                try {
-                    len = conn.send(buffer);
-                } catch (Quiche.Error e) {
-                    System.out.println("! conn.send failed " + e.getErrorCode());
+                len = conn.send(buffer);
+                if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+                    System.out.println("! conn.send failed " + len);
                     break;
                 }
                 if (len <= 0) break;

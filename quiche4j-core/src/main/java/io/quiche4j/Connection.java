@@ -26,18 +26,12 @@ public class Connection {
         Native.quiche_conn_free(getPointer());
     }
 
-    public final int send(byte[] buf) throws Quiche.Error {
-        final int sent = Native.quiche_conn_send(getPointer(), buf);
-        if(sent < 0 && Quiche.ERROR_CODE_DONE != sent)
-            throw new Quiche.Error(sent);
-        return sent;
+    public final int send(byte[] buf) {
+        return Native.quiche_conn_send(getPointer(), buf);
     }
 
-    public final int recv(byte[] buf) throws Quiche.Error {
-        final int recv = Native.quiche_conn_recv(getPointer(), buf);
-        if(recv < 0 && Quiche.ERROR_CODE_DONE != recv)
-            throw new Quiche.Error(recv);
-        return recv;
+    public final int recv(byte[] buf) {
+        return Native.quiche_conn_recv(getPointer(), buf);
     }
 
     public final long timeoutAsNanos() {
@@ -78,28 +72,20 @@ public class Connection {
         return stats;
     }
 
-    public int streamRecv(long streamId, byte[] buf) throws Quiche.Error {
-        final int recv = Native.quiche_conn_stream_recv(getPointer(), streamId, buf);
-        if(recv < 0 && Quiche.ERROR_CODE_DONE != recv)
-            throw new Quiche.Error(recv);
-        return recv;
+    public int streamRecv(long streamId, byte[] buf) {
+        return Native.quiche_conn_stream_recv(getPointer(), streamId, buf);
     }
 
-    public int streamSend(long streamId, byte[] buf, boolean fin) throws Quiche.Error {
-        final int sent = Native.quiche_conn_stream_send(getPointer(), streamId, buf, fin);
-        if(sent < 0 && Quiche.ERROR_CODE_DONE != sent)
-            throw new Quiche.Error(sent);
-        return sent;
+    public int streamSend(long streamId, byte[] buf, boolean fin) {
+        return Native.quiche_conn_stream_send(getPointer(), streamId, buf, fin);
     }
 
 	public void streamShutdown(long streamId, Shutdown direction, long err) {
         Native.quiche_conn_stream_shutdown(getPointer(), streamId, direction.value(), err);
     }
 
-    public int streamCapacity(long streamId) throws Quiche.Error {
-        final int capacity = Native.quiche_conn_stream_capacity(getPointer(), streamId);
-        if(capacity < 0) throw new Quiche.Error(capacity);
-        return capacity;
+    public int streamCapacity(long streamId) {
+        return Native.quiche_conn_stream_capacity(getPointer(), streamId);
     }
 
     public boolean streamFinished(long streamId) {

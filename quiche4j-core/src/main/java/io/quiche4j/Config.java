@@ -53,9 +53,9 @@ public class Config {
         return this;
     }
 
-    public final Config setApplicationProtos(byte[] protos) throws Quiche.Error {
+    public final Config setApplicationProtos(byte[] protos) throws ConfigError {
         final int resultCode = Native.quiche_config_set_application_protos(getPointer(), protos);
-        if(Quiche.SUCCESS_CODE != resultCode) throw new Quiche.Error(resultCode);
+        if(Quiche.SUCCESS_CODE != resultCode) throw new ConfigError(resultCode);
         return this;
     }
 
@@ -114,9 +114,9 @@ public class Config {
         return this;
     }
 
-    public final Config setCcAlgorithmName(String name) throws Quiche.Error {
+    public final Config setCcAlgorithmName(String name) throws ConfigError {
         final int resultCode = Native.quiche_config_set_cc_algorithm_name(getPointer(), name);
-        if(Quiche.SUCCESS_CODE != resultCode) throw new Quiche.Error(resultCode);
+        if(Quiche.SUCCESS_CODE != resultCode) throw new ConfigError(resultCode);
         return this;
     }
 

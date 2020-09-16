@@ -284,6 +284,10 @@ Note that `poll` would either execute callbacks and returns immediately. If ther
 
 Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche4j/examples/) folder for more complete examples on how to use the Quiche4j API to work with HTTP/3 protocol.
 
+### Errors Hanlding
+
+Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic).
+
 ## Implementation Details
 
 * Module [Native.java](src/main/java/io/quiche4j/Native.java) contains definition of all native calls

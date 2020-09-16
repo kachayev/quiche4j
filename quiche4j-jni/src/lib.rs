@@ -817,8 +817,6 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1response(
     let req = headers_from_java(&env, headers).unwrap();
     match h3_conn.send_response(conn, stream_id as u64, &req, fin != 0) {
         Ok(_) => 0 as jint,
-        // xxx(okachaiev): it's probably better not to lie about the code
-        Err(h3::Error::StreamBlocked) => Error::Done as jint,
         Err(e) => h3_error_code(e) as jint,
     }
 }

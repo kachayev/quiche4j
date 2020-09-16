@@ -19,10 +19,8 @@ public class Utils {
         }
         return new String(hex);
     }
-    
-    public static final String copyFileFromJAR(String prefix, String filepath) throws IOException {
-        System.out.println(filepath);
 
+    public static final String copyFileFromJAR(String prefix, String filepath) throws IOException {
         try(final InputStream fileStream = Utils.class.getResourceAsStream(filepath)) {
             if(fileStream == null) return null;
 
@@ -37,8 +35,6 @@ public class Utils {
                     len = fileStream.read(buffer);
                 }
             }
-    
-            System.out.println(temp.getAbsolutePath());
 
             return temp.getAbsolutePath();
         }
