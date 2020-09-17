@@ -107,8 +107,8 @@ public final class Quiche {
     /**
      * Writes a stateless retry packet.
      *
-     * The `scid` and {@code destinationConnId} parameters are the source connection ID
-     * and the destination connection ID extracted from the received client's
+     * The {@code sourceConnId} and {@code destinationConnId} parameters are the source
+     * connection ID and the destination connection ID extracted from the received client's
      * Initial packet. The server's new source connection ID and {@code token}
      * is the address validation token the client needs to echo back.
      *
@@ -116,7 +116,7 @@ public final class Quiche {
      * token to be sent to the client, and verifying tokens sent back by the
      * client. The generated token should include the {@code destinationConnId} parameter,
      * such that it can be later extracted from the token and passed to the
-     * {@long #accept()} function as its {@code originalDestinationConnId} parameter.
+     * {@link #accept()} function as its {@code originalDestinationConnId} parameter.
      */
     public static final int retry(
             byte[] sourceConnId, byte[] destinationConnId, byte[] newSourceConnId,
