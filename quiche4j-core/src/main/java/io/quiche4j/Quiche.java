@@ -9,7 +9,6 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-
 public final class Quiche {
 
     // The maximum length of a connection ID.
@@ -33,6 +32,11 @@ public final class Quiche {
 
     public static final byte[] H3_APPLICATION_PROTOCOL = "\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();
 
+    /**
+     * The stream's side to shutdown.
+     *
+     * This should be used when calling {@link Connection#streamShutdown}.
+     */
     public enum Shutdown {
         READ(0),
         WRITE(1);
@@ -81,28 +85,67 @@ public final class Quiche {
         return Arrays.copyOfRange(signed, 0, MAX_CONN_ID_LEN);
     }
 
+    /**
+     * Writes a version negotiation packet.
+     *
+     * The `scid` and {@code destinationConnId} parameters are the source connection ID and the
+     * destination connection ID extracted from the received client's Initial
+     * packet that advertises an unsupported version.
+     */
     public static final int negotiateVersion(
             byte[] sourceConnId, byte[] destinationConnId, byte[] buf) {
         return Native.quiche_negotiate_version(sourceConnId, destinationConnId, buf);
     }
 
+    /**
+     * Returns {@code true} if the given protocol version is supported.
+     */
     public static final boolean versionIsSupported(int version) {
         return Native.quiche_version_is_supported(version);
     }
 
+    /**
+     * Writes a stateless retry packet.
+     *
+     * The `scid` and {@code destinationConnId} parameters are the source connection ID
+     * and the destination connection ID extracted from the received client's
+     * Initial packet. The server's new source connection ID and {@code token}
+     * is the address validation token the client needs to echo back.
+     *
+     * The application is responsible for generating the address validation
+     * token to be sent to the client, and verifying tokens sent back by the
+     * client. The generated token should include the {@code destinationConnId} parameter,
+     * such that it can be later extracted from the token and passed to the
+     * {@long #accept()} function as its {@code originalDestinationConnId} parameter.
+     */
     public static final int retry(
             byte[] sourceConnId, byte[] destinationConnId, byte[] newSourceConnId,
             byte[] token, int version, byte[] buf) {
         return Native.quiche_retry(sourceConnId, destinationConnId, newSourceConnId, token, version, buf);
     }
 
+    /**
+     * Creates a new server-side connection.
+     *
+     * The {@code sourceConnId} parameter represents the server's source connection ID, while
+     * the optional {@code originalDestinationConnId} parameter represents the original destination ID the
+     * client sent before a stateless retry (this is only required when using
+     * the {@link #retry()} function).
+     */
     public static final Connection accept(byte[] scid, byte[] odcid, Config config) {
         final long ptr = Native.quiche_accept(scid, odcid, config.getPointer());
         return Connection.newInstance(ptr);
     }
 
-    public static final Connection connect(String domain, byte[] connId, Config config) {
-        final long ptr = Native.quiche_connect(domain, connId, config.getPointer());
+    /**
+     * Creates a new client-side connection.
+     *
+     * The {@code sourceConnId} parameter is used as the connection's source connection ID,
+     * while the optional {@code serverName} parameter is used to verify the peer's
+     * certificate.
+     */
+    public static final Connection connect(String serverName, byte[] connId, Config config) {
+        final long ptr = Native.quiche_connect(serverName, connId, config.getPointer());
         return Connection.newInstance(ptr);
     }
 
