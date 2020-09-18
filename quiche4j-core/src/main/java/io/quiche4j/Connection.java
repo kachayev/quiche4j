@@ -18,7 +18,7 @@ public class Connection {
 
     public final static Connection newInstance(long ptr) {
         final Connection conn = new Connection(ptr);
-        Native.CLEANER.register(conn, () -> conn.free());
+        Native.CLEANER.register(conn, conn::free);
         return conn;
     }
 
@@ -100,7 +100,7 @@ public class Connection {
 
         private final static StreamIter fromPointer(long ptr) {
             final StreamIter iter = new StreamIter(ptr);
-            Native.CLEANER.register(iter, () -> iter.free());
+            Native.CLEANER.register(iter, iter::free);
             return iter;
         }
 

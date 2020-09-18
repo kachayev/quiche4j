@@ -11,7 +11,7 @@ public final class H3Connection {
     public final static H3Connection withTransport(Connection conn, H3Config config) {
         final long ptr = Native.quiche_h3_conn_new_with_transport(conn.getPointer(), config.getPointer());
         final H3Connection h3 = new H3Connection(ptr, conn);
-        Native.CLEANER.register(h3, () -> h3.free());
+        Native.CLEANER.register(h3, h3::free);
         return h3;
     }
 

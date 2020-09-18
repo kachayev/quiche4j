@@ -7,7 +7,7 @@ public class H3Config {
     public static final H3Config newInstance() {
         final long ptr = Native.quiche_h3_config_new();
         final H3Config config = new H3Config(ptr);
-        Native.CLEANER.register(config, () -> config.free());
+        Native.CLEANER.register(config, config::free);
         return config;
     }
 

@@ -4,10 +4,16 @@ public class Config {
 
     private final long ptr;
 
+    // xxx(okachaiev): Java-friendly(-ier) API would be a Builder
+    // something like ...
+    //
+    //   final Config config = ConfigBuilder(version).withVerifyPeer(false).build();
+    //
+    // in this case Config constructor remains private
     public static final Config newInstance(int version) {
         final long ptr = Native.quiche_config_new(version);
         final Config config = new Config(ptr);
-        Native.CLEANER.register(config, () -> config.free());
+        Native.CLEANER.register(config, config::free);
         return config;
     }
 
