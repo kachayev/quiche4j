@@ -24,7 +24,7 @@ import io.quiche4j.PacketType;
 import io.quiche4j.Quiche;
 import io.quiche4j.Utils;
 
-public class H3Server {
+public class Http3Server {
 
     protected final static class PartialResponse {
         protected List<H3Header> headers;

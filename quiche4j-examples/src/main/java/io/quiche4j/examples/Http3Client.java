@@ -23,7 +23,7 @@ import io.quiche4j.H3PollEvent;
 import io.quiche4j.H3Header;
 import io.quiche4j.Quiche;
 
-public class H3Client {
+public class Http3Client {
 
     public static final int MAX_DATAGRAM_SIZE = 1350;
 

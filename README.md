@@ -89,7 +89,7 @@ $ mvn clean install
 $ java \
     -Djava.library.path=quiche4j-jni/target/release/ \
     -cp quiche4j-examples/target/quiche4j-examples-0.2.0-SNAPSHOT.jar \
-    io.quiche4j.examples.H3Server
+    io.quiche4j.examples.Http3Server
 ```
 
 The code would try to load native libraries from `java.library.path` first, using built-in artifact as a fallback only.

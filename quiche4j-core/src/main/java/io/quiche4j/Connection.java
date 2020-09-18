@@ -12,7 +12,7 @@ public class Connection {
         this.ptr = ptr;
     }
 
-    public final long getPointer() {
+    protected final long getPointer() {
         return this.ptr;
     }
 
@@ -80,7 +80,7 @@ public class Connection {
         return Native.quiche_conn_stream_send(getPointer(), streamId, buf, fin);
     }
 
-	public void streamShutdown(long streamId, Shutdown direction, long err) {
+    public void streamShutdown(long streamId, Shutdown direction, long err) {
         Native.quiche_conn_stream_shutdown(getPointer(), streamId, direction.value(), err);
     }
 
@@ -106,16 +106,15 @@ public class Connection {
 
         private StreamIter(long ptr) {
             this.ptr = ptr;
-            this.nextId = -1;
+            this.nextId = Quiche.ERROR_CODE_DONE;
             // xxx(okachaiev): is there a way not to call iter when creating
             // the object? :thinking:
             this.reload();
         }
-    
+
         private void reload() {
             final long nextStreamId = Native.quiche_stream_iter_next(ptr);
-            // xxx(okachaiev): magical constant again :(
-            if(-1 == nextStreamId) {
+            if (Quiche.ERROR_CODE_DONE == nextStreamId) {
                 this.hasNext = false;
             } else {
                 this.nextId = nextStreamId;
@@ -144,7 +143,7 @@ public class Connection {
         private final void free() {
             Native.quiche_stream_iter_free(getPointer());
         }
-    } 
+    }
 
     public StreamIter readable() {
         return StreamIter.fromPointer(Native.quiche_conn_readable(getPointer()));
