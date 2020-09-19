@@ -320,9 +320,10 @@ Native JNI code propagates errors using return codes (typically the return code 
 ## TODO
 
 - [ ] Documentation (like... a lot)
-- [ ] Propagate Rust panics into Java exceptions, think twice about error codes vs. throwables
+- [ ] Propagate Rust panics into Java exceptions
+- [ ] Publish Maven and Cargo artifacts
+- [ ] Experiment with in-memory serialization (Arrow?) to deal with (presumably) high overhead of manipulating objects in native code
 - [ ] All "xxx" comments both from Java and Rust code
-- [ ] Public Maven and Cargo artifacts, generate JAR with os-dependent classifiers
 
 ## Copyright
 
