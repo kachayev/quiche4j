@@ -1,6 +1,6 @@
 extern crate jni;
 
-use jni::objects::{JClass, JObject, JString, JValue, ReleaseMode};
+use jni::objects::{JClass, JList, JString, JValue, ReleaseMode};
 use jni::sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray};
 use jni::JNIEnv;
 use quiche::{h3, Config, Connection, Error, Header, StreamIter, Type};
@@ -8,6 +8,8 @@ use std::pin::Pin;
 use std::slice;
 
 type JNIResult<T> = Result<T, jni::errors::Error>;
+
+static ARRAY_LIST_CLASS: &str = "java/util/ArrayList";
 
 fn h3_error_code(error: h3::Error) -> i32 {
     match error {
@@ -728,7 +730,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1stream_1iter_1next(
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1config_1new(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1config_1new(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
@@ -738,7 +740,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1config_1new(
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1new_1with_1transport(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1conn_1new_1with_1transport(
     _env: JNIEnv,
     _class: JClass,
     conn_ptr: jlong,
@@ -752,7 +754,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1new_1with_1tran
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1free(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1conn_1free(
     _env: JNIEnv,
     _class: JClass,
     h3_conn_ptr: jlong,
@@ -773,10 +775,10 @@ fn headers_from_java<'e>(env: &JNIEnv<'e>, headers: jobjectArray) -> JNIResult<V
     for i in 0..len {
         let jobj = env.get_object_array_element(headers, i)?;
         let name = env
-            .call_method(jobj, "getName", "()Ljava/lang/String;", &[])?
+            .call_method(jobj, "name", "()Ljava/lang/String;", &[])?
             .l()?;
         let value = env
-            .call_method(jobj, "getValue", "()Ljava/lang/String;", &[])?
+            .call_method(jobj, "value", "()Ljava/lang/String;", &[])?
             .l()?;
         buf.push(h3::Header::new(
             &convert_to_string(&env, name)?,
@@ -788,7 +790,7 @@ fn headers_from_java<'e>(env: &JNIEnv<'e>, headers: jobjectArray) -> JNIResult<V
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1request(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1send_1request(
     env: JNIEnv,
     _class: JClass,
     h3_ptr: jlong,
@@ -803,7 +805,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1request(
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1response(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1send_1response(
     env: JNIEnv,
     _class: JClass,
     h3_ptr: jlong,
@@ -823,7 +825,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1response(
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1body(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1send_1body(
     env: JNIEnv,
     _class: JClass,
     h3_ptr: jlong,
@@ -841,21 +843,36 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1send_1body(
     }
 }
 
-fn call_on_header(
+fn call_on_headers(
     env: &JNIEnv,
-    handler: jobject,
+    listener: jobject,
     stream_id: u64,
-    name: &str,
-    value: &str,
+    headers: Vec<h3::Header>,
+    has_body: bool,
 ) -> JNIResult<()> {
+    let holder = env.new_object(ARRAY_LIST_CLASS, "()V", &[])?;
+    let java_headers = JList::from_env(&env, holder)?;
+    headers.iter().for_each(|header| {
+        let elem = env
+            .new_object(
+                "io/quiche4j/http3/Http3Header",
+                "(Ljava/lang/String;Ljava/lang/String;)V",
+                &[
+                    JValue::from(env.new_string(header.name()).unwrap()),
+                    JValue::from(env.new_string(header.value()).unwrap()),
+                ],
+            )
+            .unwrap();
+        java_headers.add(elem).unwrap();
+    });
     env.call_method(
-        handler,
-        "onHeader",
-        "(JLjava/lang/String;Ljava/lang/String;)V",
+        listener,
+        "onHeaders",
+        "(JLjava/util/List;Z)V",
         &[
             JValue::Long(stream_id as jlong),
-            JValue::Object(JObject::from(env.new_string(name)?)),
-            JValue::Object(JObject::from(env.new_string(value)?)),
+            JValue::Object(holder),
+            JValue::Bool(has_body as jboolean),
         ],
     )?;
     Ok(())
@@ -883,28 +900,26 @@ fn call_on_finished(env: &JNIEnv, handler: jobject, stream_id: u64) -> JNIResult
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1poll(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1conn_1poll(
     env: JNIEnv,
     _class: JClass,
     h3_conn_ptr: jlong,
     conn_ptr: jlong,
-    handler: jobject,
+    listener: jobject,
 ) -> jlong {
     let h3_conn = unsafe { &mut *(h3_conn_ptr as *mut h3::Connection) };
     let mut conn = unsafe { &mut *(conn_ptr as *mut Connection) };
     match h3_conn.poll(&mut conn) {
-        Ok((stream_id, h3::Event::Headers { list, .. })) => {
-            list.iter().for_each(|header| {
-                call_on_header(&env, handler, stream_id, header.name(), header.value()).unwrap();
-            });
+        Ok((stream_id, h3::Event::Headers { list, has_body })) => {
+            call_on_headers(&env, listener, stream_id, list, has_body).unwrap();
             stream_id as jlong
         }
         Ok((stream_id, h3::Event::Data)) => {
-            call_on_data(&env, handler, stream_id).unwrap();
+            call_on_data(&env, listener, stream_id).unwrap();
             stream_id as jlong
         }
         Ok((stream_id, h3::Event::Finished)) => {
-            call_on_finished(&env, handler, stream_id).unwrap();
+            call_on_finished(&env, listener, stream_id).unwrap();
             stream_id as jlong
         }
         Err(e) => h3_error_code(e) as jlong,
@@ -913,7 +928,7 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1conn_1poll(
 
 #[no_mangle]
 #[warn(unused_variables)]
-pub extern "system" fn Java_io_quiche4j_Native_quiche_1h3_1recv_1body(
+pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1recv_1body(
     env: JNIEnv,
     _class: JClass,
     h3_conn_ptr: jlong,

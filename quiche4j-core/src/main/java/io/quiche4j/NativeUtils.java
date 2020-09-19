@@ -3,17 +3,17 @@ package io.quiche4j;
 import java.io.IOException;
 import java.net.URL;
 
-class NativeUtils {
+public final class NativeUtils {
 
     private static final String DEFAUL_DIR = "/native-libs/";
 
     private static final String[] ALLOWED_EXTENTIONS = new String[]{"so", "dylib", "dll"};
 
-    protected static void loadEmbeddedLibrary(String libname) {
+    public static void loadEmbeddedLibrary(String libname) {
         loadEmbeddedLibrary(DEFAUL_DIR, libname);
     }
 
-    protected static void loadEmbeddedLibrary(String dir, String libname) {
+    public static void loadEmbeddedLibrary(String dir, String libname) {
         final String filename = "lib" + libname;
 
         String nativeLibraryFilepath = null;

@@ -7,7 +7,7 @@ public class Http3Config {
     private final long ptr;
 
     public static final Http3Config newInstance() {
-        final long ptr = Native.quiche_h3_config_new();
+        final long ptr = Http3Native.quiche_h3_config_new();
         final Http3Config config = new Http3Config(ptr);
         Native.registerCleaner(config, config::free);
         return config;
@@ -22,6 +22,6 @@ public class Http3Config {
     }
 
     protected final void free() {
-        Native.quiche_h3_config_free(getPointer());
+        Http3Native.quiche_h3_config_free(getPointer());
     }
 }

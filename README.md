@@ -228,7 +228,7 @@ import io.quiche4j.http3.Http3Config;
 final Http3Config h3Config = Http3Config.newInstance();
 ```
 
-HTTP/3 client and server connections are both created using the `Http3Connection.withTtransport` function:
+HTTP/3 client and server connections are both created using the `Http3Connection.withTransport` function:
 
 ```java
 import io.quiche4j.http3.Http3Connection;
@@ -243,7 +243,7 @@ An HTTP/3 client can send a request by using the connection's `sendRequest` meth
 ```java
 import io.quiche4j.http3.Http3Header;
 
-List<Http3Header> req = new ArrayList<Http3Header>();
+List<Http3Header> req = new ArrayList<>();
 req.add(new Http3Header(":method", "GET"));
 req.add(new Http3Header(":scheme", "https"));
 req.add(new Http3Header(":authority", "quic.tech"));
@@ -263,14 +263,15 @@ h3Conn.sendBody(streamId, "Hello there!".getBytes(), true);
 
 After receiving QUIC packets, HTTP/3 data is processed using the connection's `poll` method.
 
-An HTTP/3 server uses `poll` to read requests and responds to them, an HTTP/3 client uses `poll` to read responses. `poll` method accepts object that implements `Http3PollEvent` interface defining callbacks for different type of events 
+An HTTP/3 server uses `poll` to read requests and responds to them, an HTTP/3 client uses `poll` to read responses. `poll` method accepts object that implements `Http3EventListener` interface defining callbacks for different type of events 
 
 ```java
-import io.quiche4j.http3.Http3PollEvent;
+import io.quiche4j.http3.Http3EventListener;
+import io.quiche4j.http3.Http3Header;
 
-final Long streamId = h3Conn.poll(new Http3PollEvent() {
-    public void onHeader(long streamId, String name, String value) {
-        // got header
+final long streamId = h3Conn.poll(new Http3EventListener() {
+    public void onHeaders(long streamId, List<Http3Header> headers) {
+        // got headers
     }
 
     public void onData(long streamId) {

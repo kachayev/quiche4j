@@ -1,8 +1,6 @@
 package io.quiche4j.http3;
 
-import io.quiche4j.Native;
-
-public class Http3Header implements Native.Header {
+public class Http3Header {
     
     private final String name;
     private final String value;
@@ -12,11 +10,11 @@ public class Http3Header implements Native.Header {
         this.value = value;
     }
 
-    public final String getName() {
+    public final String name() {
         return this.name;
     }
 
-    public final String getValue() {
+    public final String value() {
         return this.value;
     }
 

@@ -18,7 +18,7 @@ import io.quiche4j.Connection;
 import io.quiche4j.http3.Http3Config;
 import io.quiche4j.http3.Http3Connection;
 import io.quiche4j.http3.Http3Header;
-import io.quiche4j.http3.Http3PollEvent;
+import io.quiche4j.http3.Http3EventListener;
 import io.quiche4j.PacketHeader;
 import io.quiche4j.PacketType;
 import io.quiche4j.Quiche;
@@ -274,16 +274,13 @@ public class Http3Server {
                     });
 
                     // H3 POLL
-                    final List<Http3Header> headers = new ArrayList<>();
-                    Long streamId = 0L;
                     while(true) {
-                        streamId = h3Conn.poll(new Http3PollEvent() {
-                            public void onHeader(long streamId, String name, String value) {
-                                // xxx(okachaiev): this won't work as expected in multi-threaded
-                                // environment. it feels it would be reasonable to have onHeaders
-                                // API instead of callback for each header separately
-                                headers.add(new Http3Header(name, value));
-                                System.out.println("< got header " + name + " on " + streamId);
+                        final long streamId = h3Conn.poll(new Http3EventListener() {
+                            public void onHeaders(long streamId, List<Http3Header> headers, boolean hasBody) {
+                                headers.forEach(header -> {
+                                    System.out.println("< got header " + header.name() + " on " + streamId);
+                                });
+                                handleRequest(current, streamId, headers);
                             }
 
                             public void onData(long streamId) {
@@ -294,6 +291,7 @@ public class Http3Server {
                                 System.out.println("< finished " + streamId);
                             }
                         });
+
                         if (streamId < 0 && streamId != Quiche.ERROR_CODE_DONE) {
                             System.out.println("! poll failed " + streamId);
 
@@ -304,10 +302,6 @@ public class Http3Server {
                         if(Quiche.ERROR_CODE_DONE == streamId) break;
 
                         System.out.println("< poll " + streamId);
-
-                        if(0 < headers.size()) {
-                            handleRequest(client, streamId, headers);
-                        }
                     }
                 }
             }

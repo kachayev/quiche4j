@@ -5,7 +5,7 @@ import java.lang.ref.Cleaner.Cleanable;
 
 public final class Native {
 
-	private final static String LIBRARY_NAME = "quiche_jni";
+	public final static String LIBRARY_NAME = "quiche_jni";
 
 	static {
 		// try to load from "java.library.path" location first
@@ -22,17 +22,6 @@ public final class Native {
 
 	public final static Cleanable registerCleaner(Object obj, Runnable action) {
 		return CLEANER.register(obj, action);
-	}
-
-	public static interface PollEvent {
-		void onHeader(long streamId, String name, String value);
-		void onData(long streamId);
-		void onFinished(long streamId);
-	}
-
-	public static interface Header {
-		String getName();
-		String getValue();
 	}
 
 	// CONFIG
@@ -136,26 +125,6 @@ public final class Native {
 	public final static native long quiche_stream_iter_next(long stream_iter_ptr);
 
 	public final static native void quiche_stream_iter_free(long stream_iter_ptr);
-
-	// HTTP3
-
-	public final static native long quiche_h3_config_new();
-
-	public final static native void quiche_h3_config_free(long h3_config_ptr);
-
-	public final static native long quiche_h3_conn_new_with_transport(long conn_ptr, long h3_config_ptr);
-
-	public final static native void quiche_h3_conn_free(long conn_ptr);
-
-	public final static native long quiche_h3_send_request(long h3_conn_ptr, long conn_ptr, Object[] headers, boolean fin);
-
-	public final static native int quiche_h3_recv_body(long h3_conn_ptr, long conn_ptr, long stream_id, byte[] buf);
-
-	public final static native int quiche_h3_send_response(long h3_conn_ptr, long conn_ptr, long stream_id, Object[] headers, boolean fin);
-
-	public final static native long quiche_h3_send_body(long h3_conn_ptr, long conn_ptr, long stream_id, byte[] body, boolean fin);
-
-	public final static native long quiche_h3_conn_poll(long h3_conn_ptr, long conn_ptr, PollEvent handler);
 
 	// PACKET
 
