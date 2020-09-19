@@ -60,7 +60,7 @@ public class Http3Client {
         }
 
         // CAUTION: this should not be set to `false` in production
-        config.verityPeer(false);
+        config.verifyPeer(false);
         config.setMaxIdleTimeout(5000);
         config.setMaxUdpPayloadSize(MAX_DATAGRAM_SIZE);
         config.setInitialMaxData(10_000_000);

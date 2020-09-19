@@ -39,7 +39,7 @@ public class Config {
         return this;
     }
 
-    public final Config verityPeer(boolean v) {
+    public final Config verifyPeer(boolean v) {
         Native.quiche_config_verify_peer(getPointer(), v);
         return this;
     }

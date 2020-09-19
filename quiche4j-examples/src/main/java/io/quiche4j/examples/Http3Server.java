@@ -114,7 +114,7 @@ public class Http3Server {
             return;
         }
 
-        config.verityPeer(false);
+        config.verifyPeer(false);
         config.loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"));
         config.loadPrivKeyFromPemFile(Utils.copyFileFromJAR("certs", "/cert.key"));
         config.setMaxIdleTimeout(5_000);
