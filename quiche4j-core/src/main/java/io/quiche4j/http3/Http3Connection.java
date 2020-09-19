@@ -1,6 +1,5 @@
 package io.quiche4j.http3;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import io.quiche4j.Connection;

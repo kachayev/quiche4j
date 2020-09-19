@@ -103,7 +103,10 @@ For cross-compilation options, see `cargo build` [documentation](https://doc.rus
 Before establishing a QUIC connection, you need to create a configuration object:
 
 ```java
-final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
+import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
+
+final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION).build();
 ```
 
 On the client-side the `Quiche.connect` utility function can be used to create a new connection, while `Quiche.accept` is for servers:
@@ -211,21 +214,25 @@ The library provides a high level API for sending and receiving HTTP/3 requests 
 
 ### Connection
 
-HTTP/3 connections require a QUIC transport-layer connection, see "Connection" for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
+HTTP/3 connections require a QUIC transport-layer connection, see ["Connection"](#Connection) for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
 
 ```java
+import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
 import io.quiche4j.http3.Http3Connection;
 
-final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
-config.setApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL);
+final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
+    .withApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL)
+    .build();
 ```
 
 The QUIC handshake is driven by sending and receiving QUIC packets. Once the handshake has completed, the first step in establishing an HTTP/3 connection is creating its configuration object:
 
 ```java
 import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3ConfigBuilder;
 
-final Http3Config h3Config = Http3Config.newInstance();
+final Http3Config h3Config = new Http3ConfigBuilder().build();
 ```
 
 HTTP/3 client and server connections are both created using the `Http3Connection.withTransport` function:

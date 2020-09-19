@@ -1,6 +1,5 @@
 package io.quiche4j.examples;
 
-import io.quiche4j.ConfigError;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -16,12 +15,15 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
 import io.quiche4j.Connection;
 import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3ConfigBuilder;
 import io.quiche4j.http3.Http3Connection;
 import io.quiche4j.http3.Http3EventListener;
 import io.quiche4j.http3.Http3Header;
 import io.quiche4j.Quiche;
+import io.quiche4j.Utils;
 
 public class Http3Client {
 
@@ -49,27 +51,22 @@ public class Http3Client {
         final int port = uri.getPort();
         final InetAddress address = InetAddress.getByName(uri.getHost());
 
-        final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
-
-        try {
-            config.setApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL);
-        } catch (ConfigError e) {
-            System.out.println("! wrong protocol " + e.getErrorCode());
-            System.exit(1);
-            return;
-        }
-
-        // CAUTION: this should not be set to `false` in production
-        config.verifyPeer(false);
-        config.setMaxIdleTimeout(5000);
-        config.setMaxUdpPayloadSize(MAX_DATAGRAM_SIZE);
-        config.setInitialMaxData(10_000_000);
-        config.setInitialMaxStreamDataBidiLocal(1_000_000);
-        config.setInitialMaxStreamDataBidiRemote(1_000_000);
-        config.setInitialMaxStreamDataUni(1_000_000);
-        config.setInitialMaxStreamsBidi(100);
-        config.setInitialMaxStreamsUni(100);
-        config.setDisableActiveMigration(true);
+        final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
+            .withApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL)
+            // CAUTION: this should not be set to `false` in production
+            .withVerifyPeer(false)
+            .loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"))
+            .loadPrivKeyFromPemFile(Utils.copyFileFromJAR("certs", "/cert.key"))
+            .withMaxIdleTimeout(5_000)
+            .withMaxUdpPayloadSize(MAX_DATAGRAM_SIZE)
+            .withInitialMaxData(10_000_000)
+            .withInitialMaxStreamDataBidiLocal(1_000_000)
+            .withInitialMaxStreamDataBidiRemote(1_000_000)
+            .withInitialMaxStreamDataUni(1_000_000)
+            .withInitialMaxStreamsBidi(100)
+            .withInitialMaxStreamsUni(100)
+            .withDisableActiveMigration(true)
+            .build();
 
 		final byte[] connId = Quiche.newConnectionId();
         final Connection conn = Quiche.connect(uri.getHost(), connId, config);
@@ -91,8 +88,8 @@ public class Http3Client {
 
         Long streamId = null;
         final AtomicBoolean reading = new AtomicBoolean(true);
-        final Http3Config h3Config = Http3Config.newInstance();
-        DatagramPacket packet; 
+        final Http3Config h3Config = new Http3ConfigBuilder().build();
+        DatagramPacket packet;
         Http3Connection h3Conn = null;
 
         while(!conn.isClosed()) {
