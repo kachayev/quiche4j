@@ -17,10 +17,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.quiche4j.Config;
 import io.quiche4j.Connection;
-import io.quiche4j.H3Config;
-import io.quiche4j.H3Connection;
-import io.quiche4j.H3PollEvent;
-import io.quiche4j.H3Header;
+import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3Connection;
+import io.quiche4j.http3.Http3PollEvent;
+import io.quiche4j.http3.Http3Header;
 import io.quiche4j.Quiche;
 
 public class Http3Client {
@@ -52,7 +52,7 @@ public class Http3Client {
         final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
 
         try {
-            config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
+            config.setApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL);
         } catch (ConfigError e) {
             System.out.println("! wrong protocol " + e.getErrorCode());
             System.exit(1);
@@ -91,9 +91,9 @@ public class Http3Client {
 
         Long streamId = null;
         final AtomicBoolean reading = new AtomicBoolean(true);
-        final H3Config h3Config = H3Config.newInstance();
+        final Http3Config h3Config = Http3Config.newInstance();
         DatagramPacket packet; 
-        H3Connection h3Conn = null;
+        Http3Connection h3Conn = null;
 
         while(!conn.isClosed()) {
             // READING LOOP
@@ -122,8 +122,8 @@ public class Http3Client {
 
                 // POLL
                 if(null != h3Conn) {
-                    final H3Connection h3c = h3Conn;
-                    streamId = h3c.poll(new H3PollEvent() {
+                    final Http3Connection h3c = h3Conn;
+                    streamId = h3c.poll(new Http3PollEvent() {
                         public void onHeader(long _streamId, String name, String value) {
                             System.out.println(name + ": " + value);
                         }
@@ -165,17 +165,17 @@ public class Http3Client {
             }
 
             if(conn.isEstablished() && null == h3Conn) {
-                h3Conn = H3Connection.withTransport(conn, h3Config);
+                h3Conn = Http3Connection.withTransport(conn, h3Config);
 
                 System.out.println("! h3 conn is established");
 
-                List<H3Header> req = new ArrayList<H3Header>();
-                req.add(new H3Header(":method", "GET"));
-                req.add(new H3Header(":scheme", uri.getScheme()));
-                req.add(new H3Header(":authority", uri.getAuthority()));
-                req.add(new H3Header(":path", uri.getPath()));
-                req.add(new H3Header("user-agent", CLIENT_NAME));
-                req.add(new H3Header("content-length", "0"));
+                List<Http3Header> req = new ArrayList<Http3Header>();
+                req.add(new Http3Header(":method", "GET"));
+                req.add(new Http3Header(":scheme", uri.getScheme()));
+                req.add(new Http3Header(":authority", uri.getAuthority()));
+                req.add(new Http3Header(":path", uri.getPath()));
+                req.add(new Http3Header("user-agent", CLIENT_NAME));
+                req.add(new Http3Header("content-length", "0"));
                 h3Conn.sendRequest(req, true);
             }
 

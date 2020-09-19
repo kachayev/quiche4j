@@ -1,26 +1,32 @@
-package io.quiche4j;
+package io.quiche4j.http3;
 
 import java.util.List;
 
-// xxx(okachaiev): move this to h3 package? :thinking:
-public final class H3Connection {
-    
+import io.quiche4j.Connection;
+import io.quiche4j.Native;
+
+public final class Http3Connection {
+
+    public static final byte[] HTTP3_APPLICATION_PROTOCOL = "\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();
+
+    public static long ERROR_CODE_HTTP3_STREAM_BLOCKED = -13L;
+
     private final long ptr;
     private final Connection conn;
 
-    public final static H3Connection withTransport(Connection conn, H3Config config) {
+    public final static Http3Connection withTransport(Connection conn, Http3Config config) {
         final long ptr = Native.quiche_h3_conn_new_with_transport(conn.getPointer(), config.getPointer());
-        final H3Connection h3 = new H3Connection(ptr, conn);
-        Native.CLEANER.register(h3, h3::free);
+        final Http3Connection h3 = new Http3Connection(ptr, conn);
+        Native.registerCleaner(h3, h3::free);
         return h3;
     }
 
-    private H3Connection(long ptr, Connection conn) {
+    private Http3Connection(long ptr, Connection conn) {
         this.ptr = ptr;
         this.conn = conn;
     }
 
-    protected final long getPointer() {
+    public final long getPointer() {
         return this.ptr;
     }
 
@@ -28,11 +34,11 @@ public final class H3Connection {
         Native.quiche_h3_conn_free(getPointer());
     }
 
-    public final void sendRequest(List<H3Header> headers, boolean fin) {
-        sendRequest(headers.toArray(new H3Header[0]), fin);
+    public final void sendRequest(List<Http3Header> headers, boolean fin) {
+        sendRequest(headers.toArray(new Http3Header[0]), fin);
     }
 
-    public final void sendRequest(H3Header[] headers, boolean fin) {
+    public final void sendRequest(Http3Header[] headers, boolean fin) {
         Native.quiche_h3_send_request(getPointer(), conn.getPointer(), headers, fin);
     }
 
@@ -43,11 +49,11 @@ public final class H3Connection {
     // xxx(okachaiev): double check if we need an API option where H3 connection
     // get transport connection different from what was used to create a conn in
     // the first place
-    public final long sendResponse(long streamId, List<H3Header> headers, boolean fin) {
-        return sendResponse(streamId, headers.toArray(new H3Header[0]), fin);
+    public final long sendResponse(long streamId, List<Http3Header> headers, boolean fin) {
+        return sendResponse(streamId, headers.toArray(new Http3Header[0]), fin);
     }
 
-    public final long sendResponse(long streamId, H3Header[] headers, boolean fin) {
+    public final long sendResponse(long streamId, Http3Header[] headers, boolean fin) {
         return Native.quiche_h3_send_response(getPointer(), conn.getPointer(), streamId, headers, fin);
     }
 
@@ -58,7 +64,7 @@ public final class H3Connection {
     // Rust API returns poll event explicitly which works really well
     // with proper ADT support. Callbacks interface lacks causality but
     // this feels more Java-style of how to organize the code  
-    public Long poll(H3PollEvent eventHandler) {
+    public Long poll(Http3PollEvent eventHandler) {
         return Native.quiche_h3_conn_poll(getPointer(), conn.getPointer(), eventHandler);
     }
 

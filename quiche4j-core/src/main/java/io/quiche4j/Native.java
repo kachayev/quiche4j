@@ -1,6 +1,7 @@
 package io.quiche4j;
 
 import java.lang.ref.Cleaner;
+import java.lang.ref.Cleaner.Cleanable;
 
 public final class Native {
 
@@ -18,6 +19,10 @@ public final class Native {
 	}
 
 	protected final static Cleaner CLEANER = Cleaner.create(); 
+
+	public final static Cleanable registerCleaner(Object obj, Runnable action) {
+		return CLEANER.register(obj, action);
+	}
 
 	public static interface PollEvent {
 		void onHeader(long streamId, String name, String value);
@@ -150,7 +155,7 @@ public final class Native {
 
 	public final static native long quiche_h3_send_body(long h3_conn_ptr, long conn_ptr, long stream_id, byte[] body, boolean fin);
 
-	public final static native long quiche_h3_conn_poll(long h3_conn_ptr, long conn_ptr, H3PollEvent handler);
+	public final static native long quiche_h3_conn_poll(long h3_conn_ptr, long conn_ptr, PollEvent handler);
 
 	// PACKET
 

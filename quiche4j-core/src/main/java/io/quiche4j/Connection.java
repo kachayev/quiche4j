@@ -12,13 +12,13 @@ public class Connection {
         this.ptr = ptr;
     }
 
-    protected final long getPointer() {
+    public final long getPointer() {
         return this.ptr;
     }
 
     public final static Connection newInstance(long ptr) {
         final Connection conn = new Connection(ptr);
-        Native.CLEANER.register(conn, conn::free);
+        Native.registerCleaner(conn, conn::free);
         return conn;
     }
 
@@ -100,7 +100,7 @@ public class Connection {
 
         private final static StreamIter fromPointer(long ptr) {
             final StreamIter iter = new StreamIter(ptr);
-            Native.CLEANER.register(iter, iter::free);
+            Native.registerCleaner(iter, iter::free);
             return iter;
         }
 

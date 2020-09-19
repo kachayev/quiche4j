@@ -17,7 +17,6 @@ public final class Quiche {
     public static final String CONN_ID_SEED_ALGO = "HMACSHA256";
 
     public static long ERROR_CODE_DONE = -1L;
-    public static long ERROR_CODE_H3_STREAM_BLOCKED = -13L;
     public static long SUCCESS_CODE = 0L;
 
     // Supported QUIC versions.
@@ -29,8 +28,6 @@ public final class Quiche {
 
     // The current QUIC wire version.
     public static final int PROTOCOL_VERSION = PROTOCOL_VERSION_DRAFT29;
-
-    public static final byte[] H3_APPLICATION_PROTOCOL = "\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();
 
     /**
      * The stream's side to shutdown.

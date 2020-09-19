@@ -1,11 +1,13 @@
-package io.quiche4j;
+package io.quiche4j.http3;
 
-public class H3Header implements Native.Header {
+import io.quiche4j.Native;
+
+public class Http3Header implements Native.Header {
     
     private final String name;
     private final String value;
 
-    public H3Header(String name, String value) {
+    public Http3Header(String name, String value) {
         this.name = name.toLowerCase();
         this.value = value;
     }

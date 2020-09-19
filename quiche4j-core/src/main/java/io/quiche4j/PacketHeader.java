@@ -1,6 +1,5 @@
 package io.quiche4j;
 
-// xxx(okachaiev): move to "Packet" as a subclass
 public final class PacketHeader {
 
     private PacketType packetType;
@@ -46,8 +45,7 @@ public final class PacketHeader {
         }
     }
 
-    // xxx(okachaiev): avoid get* prefix for getters? :thinking: 
-    public final PacketType getPacketType() {
+    public final PacketType packetType() {
         return this.packetType;
     }
 
@@ -55,25 +53,23 @@ public final class PacketHeader {
         this.version = version;
     }
 
-    public final int getVersion() {
+    public final int version() {
         return this.version;
     }
 
-    // xxx(okachaiev): rename as getter
-    protected final void setDcid(byte[] dcid) {
+    protected final void setDestinationConnectionId(byte[] dcid) {
         this.dcid = dcid;
     }
 
-    public final byte[] getDestinationConnectionId() {
+    public final byte[] destinationConnectionId() {
         return this.dcid;
     }
 
-    // xxx(okachaiev): rename as getter
-    protected final void setScid(byte[] scid) {
+    protected final void setSourceConnectionId(byte[] scid) {
         this.scid = scid;
     }
 
-    public final byte[] getSourceConnectionId() {
+    public final byte[] sourceConnectionId() {
         return this.scid;
     }
 
@@ -81,7 +77,7 @@ public final class PacketHeader {
         this.packetNum = packetNum;
     }
 
-    public final long getPacketNum() {
+    public final long packetNum() {
         return this.packetNum;
     }
 
@@ -89,7 +85,7 @@ public final class PacketHeader {
         this.packetNumLen = packetNumLen;
     }
 
-    public final int getPacketNumLen() {
+    public final int packetNumLen() {
         return this.packetNumLen;
     }
 
@@ -97,7 +93,7 @@ public final class PacketHeader {
         this.token = token.length > 0 ? token : null;
     }
 
-    public final byte[] getToken() {
+    public final byte[] token() {
         return this.token;
     }
 
@@ -105,7 +101,7 @@ public final class PacketHeader {
         this.versions = versions;
     }
 
-    public final int[] getVersions() {
+    public final int[] versions() {
         return this.versions;
     }
 
@@ -113,7 +109,7 @@ public final class PacketHeader {
         this.keyPhase = keyPhase;
     }
 
-    public final boolean getKeyPhase() {
+    public final boolean keyPhase() {
         return this.keyPhase;
     }
 

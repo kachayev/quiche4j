@@ -1,17 +1,19 @@
-package io.quiche4j;
+package io.quiche4j.http3;
 
-public class H3Config {
+import io.quiche4j.Native;
+
+public class Http3Config {
 
     private final long ptr;
 
-    public static final H3Config newInstance() {
+    public static final Http3Config newInstance() {
         final long ptr = Native.quiche_h3_config_new();
-        final H3Config config = new H3Config(ptr);
-        Native.CLEANER.register(config, config::free);
+        final Http3Config config = new Http3Config(ptr);
+        Native.registerCleaner(config, config::free);
         return config;
     }
 
-    private H3Config(long ptr) {
+    private Http3Config(long ptr) {
         this.ptr = ptr;
     }
 

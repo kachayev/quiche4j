@@ -13,7 +13,7 @@ public class Config {
     public static final Config newInstance(int version) {
         final long ptr = Native.quiche_config_new(version);
         final Config config = new Config(ptr);
-        Native.CLEANER.register(config, config::free);
+        Native.registerCleaner(config, config::free);
         return config;
     }
 

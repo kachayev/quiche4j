@@ -974,14 +974,14 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1header_1from_1slice(
     .unwrap();
     env.call_method(
         holder,
-        "setDcid",
+        "setDestinationConnectionId",
         "([B)V",
         &[env.byte_array_from_slice(&hdr.dcid).unwrap().into()],
     )
     .unwrap();
     env.call_method(
         holder,
-        "setScid",
+        "setSourceConnectionId",
         "([B)V",
         &[env.byte_array_from_slice(&hdr.scid).unwrap().into()],
     )

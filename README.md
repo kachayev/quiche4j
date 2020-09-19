@@ -111,6 +111,8 @@ On the client-side the `Quiche.connect` utility function can be used to create a
 ```java
 // client
 final byte[] connId = Quiche.newConnectionId();
+// note, that "quic.tech" here is not used for establishing network
+// connection. it's used only for peer verification (thus, optional)
 final Connection conn = Quiche.connect("quic.tech", connId, config);
 
 // server
@@ -212,20 +214,26 @@ The library provides a high level API for sending and receiving HTTP/3 requests 
 HTTP/3 connections require a QUIC transport-layer connection, see "Connection" for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
 
 ```java
+import io.quiche4j.http3.Http3Connection;
+
 final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
-config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
+config.setApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL);
 ```
 
 The QUIC handshake is driven by sending and receiving QUIC packets. Once the handshake has completed, the first step in establishing an HTTP/3 connection is creating its configuration object:
 
 ```java
-final H3Config h3Config = H3Config.newInstance();
+import io.quiche4j.http3.Http3Config;
+
+final Http3Config h3Config = Http3Config.newInstance();
 ```
 
-HTTP/3 client and server connections are both created using the `H3Connection.withTtransport` function:
+HTTP/3 client and server connections are both created using the `Http3Connection.withTtransport` function:
 
 ```java
-final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
+import io.quiche4j.http3.Http3Connection;
+
+final Http3Connection h3Conn = Http3Connection.withTransport(conn, h3Config);
 ```
 
 ### Sending Request
@@ -233,12 +241,14 @@ final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
 An HTTP/3 client can send a request by using the connection's `sendRequest` method to queue request headers; sending QUIC packets causes the requests to get sent to the peer:
 
 ```java
-List<H3Header> req = new ArrayList<H3Header>();
-req.add(new H3Header(":method", "GET"));
-req.add(new H3Header(":scheme", "https"));
-req.add(new H3Header(":authority", "quic.tech"));
-req.add(new H3Header(":path", "/"));
-req.add(new H3Header("user-agent", "Quiche4j"));
+import io.quiche4j.http3.Http3Header;
+
+List<Http3Header> req = new ArrayList<Http3Header>();
+req.add(new Http3Header(":method", "GET"));
+req.add(new Http3Header(":scheme", "https"));
+req.add(new Http3Header(":authority", "quic.tech"));
+req.add(new Http3Header(":path", "/"));
+req.add(new Http3Header("user-agent", "Quiche4j"));
 h3Conn.sendRequest(req, true);
 ```
 
@@ -253,10 +263,12 @@ h3Conn.sendBody(streamId, "Hello there!".getBytes(), true);
 
 After receiving QUIC packets, HTTP/3 data is processed using the connection's `poll` method.
 
-An HTTP/3 server uses `poll` to read requests and responds to them, an HTTP/3 client uses `poll` to read responses. `poll` method accepts object that implements `H3PollEvent` interface defining callbacks for different type of events 
+An HTTP/3 server uses `poll` to read requests and responds to them, an HTTP/3 client uses `poll` to read responses. `poll` method accepts object that implements `Http3PollEvent` interface defining callbacks for different type of events 
 
 ```java
-final Long streamId = h3Conn.poll(new H3PollEvent() {
+import io.quiche4j.http3.Http3PollEvent;
+
+final Long streamId = h3Conn.poll(new Http3PollEvent() {
     public void onHeader(long streamId, String name, String value) {
         // got header
     }
@@ -273,12 +285,13 @@ final Long streamId = h3Conn.poll(new H3PollEvent() {
     }
 });
 
-if(null == streamId) {
+if(Quiche.ERROR_CODE_DONE == streamId) {
     // this means no event was emitted
+    // it would take more packets to proceed with new events
 }
 ```
 
-Note that `poll` would either execute callbacks and returns immediately. If there's not enough data to fire any of the events, `poll` immediately returns `null`. The application is responsible for handling incoming packets from the network and feeding packets data into connection before executing next `poll`.
+Note that `poll` would either execute callbacks and returns immediately. If there's not enough data to fire any of the events, `poll` immediately returns `Quiche.ERROR_CODE_DONE`. The application is responsible for handling incoming packets from the network and feeding packets data into connection before executing next `poll`.
 
 ### Examples
 
