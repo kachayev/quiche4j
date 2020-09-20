@@ -311,18 +311,21 @@ Native JNI code propagates errors using return codes (typically the return code 
 
 ## Implementation Details
 
-* Module [Native.java](src/main/java/io/quiche4j/Native.java) contains definition of all native calls
+* Modules [Native.java](src/main/java/io/quiche4j/Native.java) and [Http3Native.java](src/main/java/io/quiche4j/http3/Http3Native.java) contains definition of all native calls, structurally close to `quiche`'s [`src/ffi.rs`](https://github.com/cloudflare/quiche/blob/master/src/ffi.rs) and [`src/h3/ffi.rs`](https://github.com/cloudflare/quiche/blob/master/src/h3/ffi.rs) respectively.
 
-* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using [`rust-jni`](https://docs.rs/jni/0.17.0/jni/) library
+* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using [`rust-jni`](https://docs.rs/jni/0.17.0/jni/) library. The goal was to stick to primitive types as much as possible and avoid Java objects manipulations in native code. There are still a few exceptions from this rule, e.g. operations with connection `Stats`, management of `Http3Header` lists, etc.
 
-* Proxy Java objects maintain a handle to corresponding Rust struct to maximise compatability with all `quiche` features 
+* Proxy Java objects maintain a handle (pointer) to the corresponding Rust struct to maximise compatability with all `quiche` features. A single instance of a `Cleaner` is statically defined in `io.quiche4j.Native` class and is used to register all deallocation callback (conventionally called `free` for each class that maintains a native pointer).
 
 ## TODO
 
-- [ ] Propagate Rust panics into Java exceptions
-- [ ] Publish Maven and Cargo artifacts
-- [ ] All "xxx" comments both from Java and Rust code
-- [ ] qlog support
+There are still a few `xxx` comments in the code. Both for Java and for Rust. Plus, there are a few methods that are not exposed to Java layer. Notably, operations with stream priorities and HTTP/3 connection configuration (some of those would require to extend `quiche` library as well).
+
+Other ideas to work on:
+
+- [ ] Propagate Rust panics into Java exceptions (when necessary)
+- [ ] Setup integration testing suite against different QUIC implementations out there
+- [ ] Qlog support
 - [ ] Experiment with in-memory serialization (Arrow?) to deal with (presumably) high overhead of manipulating objects in native code
 
 ## Copyright

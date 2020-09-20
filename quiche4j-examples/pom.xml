@@ -9,7 +9,6 @@
     <artifactId>quiche4j-examples</artifactId>
     <name>Quiche4j/Examples</name>
     <packaging>jar</packaging>
-    <version>0.2.2</version>
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
