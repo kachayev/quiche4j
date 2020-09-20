@@ -1,0 +1,12 @@
+[package]
+name = "quiche-jni"
+version = "0.1.0"
+authors = ["Oleksii Kachaiev"]
+edition = "2018"
+
+[dependencies]
+jni = "0.17.0"
+quiche = "0.5.1"
+
+[lib]
+crate_type = ["cdylib"]
