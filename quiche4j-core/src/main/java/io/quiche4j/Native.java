@@ -3,6 +3,9 @@ package io.quiche4j;
 import java.lang.ref.Cleaner;
 import java.lang.ref.Cleaner.Cleanable;
 
+/**
+ * Declaration of native JNI calls for QUIC transport.
+ */
 public final class Native {
 
 	public final static String LIBRARY_NAME = "quiche_jni";

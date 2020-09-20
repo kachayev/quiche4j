@@ -83,7 +83,7 @@ public class Http3Client {
 		System.out.println("> handshake size: " + len);
 
 		final DatagramPacket handshakePacket = new DatagramPacket(buffer, len, address, port);
-        final DatagramSocket socket = new DatagramSocket(10002);
+        final DatagramSocket socket = new DatagramSocket(0);
         socket.setSoTimeout(200);
 		socket.send(handshakePacket);
 
@@ -105,7 +105,7 @@ public class Http3Client {
 
                     // xxx(okachaiev): if we extend `recv` API to with optional buf len,
                     // we could avoid Arrays.copy here
-                    final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
+                    final int read = conn.recv(Arrays.copyOfRange(packet.getData(), packet.getOffset(), recvBytes));
                     if (read < 0 && read != Quiche.ErrorCode.DONE) {
                         System.out.println("> conn.recv failed " + read);
 

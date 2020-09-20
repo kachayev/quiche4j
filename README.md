@@ -133,7 +133,7 @@ while(true) {
     try {
         // read from the socket
         socket.receive(packet);
-        final byte[] buffer = Arrays.copyOfRange(packet.getData(), 0, packet.getLength());
+        final byte[] buffer = Arrays.copyOfRange(packet.getData(), packet.getOffset(), packet.getLength());
         // update the connection state
         final int read = conn.recv(buffer);
         if(read <= 0) break;
@@ -319,11 +319,11 @@ Native JNI code propagates errors using return codes (typically the return code 
 
 ## TODO
 
-- [ ] Documentation (like... a lot)
 - [ ] Propagate Rust panics into Java exceptions
 - [ ] Publish Maven and Cargo artifacts
-- [ ] Experiment with in-memory serialization (Arrow?) to deal with (presumably) high overhead of manipulating objects in native code
 - [ ] All "xxx" comments both from Java and Rust code
+- [ ] qlog support
+- [ ] Experiment with in-memory serialization (Arrow?) to deal with (presumably) high overhead of manipulating objects in native code
 
 ## Copyright
 

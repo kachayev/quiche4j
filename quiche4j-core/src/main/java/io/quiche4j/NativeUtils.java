@@ -3,6 +3,10 @@ package io.quiche4j;
 import java.io.IOException;
 import java.net.URL;
 
+/**
+ * Helper functionality to try to resolve native library from JAR
+ * in case when a system dependency is not available.
+ */
 public final class NativeUtils {
 
     private static final String DEFAUL_DIR = "/native-libs/";

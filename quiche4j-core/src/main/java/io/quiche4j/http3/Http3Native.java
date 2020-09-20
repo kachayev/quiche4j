@@ -4,6 +4,9 @@ import static io.quiche4j.Native.LIBRARY_NAME;
 
 import io.quiche4j.NativeUtils;
 
+/**
+ * Declaration of native JNI calls for HTTP/3 protocol.
+ */
 public class Http3Native {
 
     static {

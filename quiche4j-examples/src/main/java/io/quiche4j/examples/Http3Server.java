@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -45,11 +46,11 @@ public class Http3Server {
         private final Connection conn;
         private Http3Connection h3Conn;
         private HashMap<Long, PartialResponse> partialResponses;
-        private InetAddress address;
-        private int port;
+        private SocketAddress sender;
 
-        public Client(Connection conn) {
+        public Client(Connection conn, SocketAddress sender) {
             this.conn = conn;
+            this.sender = sender;
             this.h3Conn = null;
             this.partialResponses = new HashMap<>();
         }
@@ -58,25 +59,16 @@ public class Http3Server {
             return this.conn;
         }
 
+        public final SocketAddress sender() {
+            return this.sender;
+        }
+
         public final Http3Connection http3Connection() {
             return this.h3Conn;
         }
 
         public final void setHttp3Connection(Http3Connection conn) {
             this.h3Conn = conn;
-        }
-
-        public final void setSource(InetAddress address, int port) {
-            this.address = address;
-            this.port = port;
-        }
-
-        public final InetAddress getAddress() {
-            return this.address;
-        }
-
-        public final int getPort() {
-            return this.port;
         }
 
     }
@@ -108,7 +100,6 @@ public class Http3Server {
 
         final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
             .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
-            // CAUTION: this should not be set to `false` in production
             .withVerifyPeer(false)
             .loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"))
             .loadPrivKeyFromPemFile(Utils.copyFileFromJAR("certs", "/cert.key"))
@@ -148,14 +139,15 @@ public class Http3Server {
                     break;
                 }
 
+                final int offset = packet.getOffset();
                 final int len = packet.getLength();
                 // xxx(okachaiev): can we avoid doing copy here?
-                final byte[] packetBuf = Arrays.copyOfRange(packet.getData(), 0, len);
+                final byte[] packetBuf = Arrays.copyOfRange(packet.getData(), offset, len);
 
                 System.out.println("> socket.recv " + len + " bytes");
 
                 // PARSE QUIC HEADER
-                PacketHeader hdr;
+                final PacketHeader hdr;
                 try {
                     hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
                     System.out.println("> packet " + hdr);
@@ -233,8 +225,7 @@ public class Http3Server {
 
                     System.out.println("> new connection " + Utils.asHex(sourceConnId));
 
-                    client = new Client(conn);
-                    client.setSource(packet.getAddress(), packet.getPort());
+                    client = new Client(conn, packet.getSocketAddress());
                     clients.put(Utils.asHex(sourceConnId), client);
 
                     System.out.println("! # of clients: " + clients.size());
@@ -315,8 +306,7 @@ public class Http3Server {
                     }
                     if (len <= 0) break;
                     System.out.println("> conn.send "+ len + " bytes");
-                    final DatagramPacket packet =
-                        new DatagramPacket(out, len, client.getAddress(), client.getPort());
+                    final DatagramPacket packet = new DatagramPacket(out, len, client.sender());
                     socket.send(packet);
                 }
             }

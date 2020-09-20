@@ -1,0 +1,25 @@
+<body>
+    <h1>Quiche4j</h1>
+    <p>Java implementation of the QUIC transport protocol and HTTP/3.</p>
+    <p>The library provides thin Java API layer on top of JNI calls to <a
+            href="https://github.com/cloudflare/quiche">quiche</a>. <code>Quiche4j</code> provides a low level API for
+        processing QUIC packets and handling connection state. The application is responsible for providing I/O (e.g.
+        sockets handling) as well as timers. The library itself does not make any assumptions on how I/O layer is
+        organized, making it's pluggle into different architectures.</p>
+    <p>The main goal of the JNI bindings is to ensure high-performance and flexibility for the application developers
+        while maintaining full access to <code>quiche</code> library features. Specifically, the bindings layer tries to
+        ensure zero-copy data trasfer between runtimes where possible and perform minimum allocations on Java side.</p>
+    <h2>API</h2>
+    <p>See API usage section <a href="https://github.com/kachayev/quiche4j#api">here</a>.</p>
+    <h2>Examples</h2>
+    <p>Have a look at the <a href="https://github.com/kachayev/quiche4j/quiche4j-examples/src/main/java/io/quiche4j/examples/">quiche4j-examples</a> folder
+        for more complete examples on how to use the Quiche4j API to work with HTTP/3 protocol.</p>
+    <h2>Errors Hanlding</h2>
+    <p>Native JNI code propagates errors using return codes (typically the return code &lt; 0 means either <code>DONE</code> or
+        failed). For example, <a
+            href="https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365"><code>quiche::Error</code></a>
+        enum. <code>Quiche4j</code> follows the same convention instead of throwing Java exceptions to ensure good
+        perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat
+        problematic). See <a href="https://github.com/kachayev/quiche4j/quiche4j-core/src/main/java/io/quiche4j/Quiche.java"><code>Quiche.ErrorCode</code></a> and <a
+            href="https://github.com/kachayev/quiche4j/quiche4j-core/src/main/java/io/quiche4j/http3/Http3.java"><code>Http3.ErrorCode</code></a> for more details.</p>
+</body>
