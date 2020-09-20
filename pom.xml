@@ -58,6 +58,7 @@
       <!-- Generate Xref -->
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
+        <version>3.0.0</version>
         <executions>
           <execution>
             <id>generate-xref</id>
@@ -78,6 +79,7 @@
       <!-- Generate Javadoc -->
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.2.0</version>
         <executions>
           <execution>
             <id>attach-javadocs</id>

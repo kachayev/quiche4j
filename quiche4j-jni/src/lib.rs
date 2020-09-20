@@ -10,6 +10,7 @@ use std::slice;
 type JNIResult<T> = Result<T, jni::errors::Error>;
 
 static ARRAY_LIST_CLASS: &str = "java/util/ArrayList";
+static HTTP3_HEADER_CLASS: &str = "io/quiche4j/http3/Http3Header";
 
 fn h3_error_code(error: h3::Error) -> i32 {
     match error {
@@ -855,7 +856,7 @@ fn call_on_headers(
     headers.iter().for_each(|header| {
         let elem = env
             .new_object(
-                "io/quiche4j/http3/Http3Header",
+                HTTP3_HEADER_CLASS,
                 "(Ljava/lang/String;Ljava/lang/String;)V",
                 &[
                     JValue::from(env.new_string(header.name()).unwrap()),

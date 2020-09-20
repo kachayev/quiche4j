@@ -9,7 +9,6 @@
   <artifactId>quiche4j-core</artifactId>
   <name>Quiche4j/Core</name>
   <packaging>jar</packaging>
-  <version>0.2.2</version>
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -18,12 +17,4 @@
       <classifier>${os.detected.classifier}</classifier>
     </dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.commonjava.maven.plugins</groupId>
-        <artifactId>directory-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 </project>
