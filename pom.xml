@@ -4,7 +4,7 @@
   <groupId>io.quiche4j</groupId>
   <artifactId>quiche4j</artifactId>
   <packaging>pom</packaging>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.2.1</version>
   <name>quiche4j</name>
   <url>https://github.com/kachayev/quiche4j</url>
   <developers>
@@ -13,6 +13,13 @@
       <name>Oleksii Kachaiev</name>
     </developer>
   </developers>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/kachayev/quiche4j</url>
+    </repository>
+  </distributionManagement>
   <modules>
     <module>quiche4j-jni</module>
     <module>quiche4j-core</module>
