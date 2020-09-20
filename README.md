@@ -222,7 +222,7 @@ import io.quiche4j.ConfigBuilder;
 import io.quiche4j.http3.Http3Connection;
 
 final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
-    .withApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL)
+    .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
     .build();
 ```
 
@@ -293,13 +293,13 @@ final long streamId = h3Conn.poll(new Http3EventListener() {
     }
 });
 
-if(Quiche.ERROR_CODE_DONE == streamId) {
+if(Quiche.ErrorCode.DONE == streamId) {
     // this means no event was emitted
     // it would take more packets to proceed with new events
 }
 ```
 
-Note that `poll` would either execute callbacks and returns immediately. If there's not enough data to fire any of the events, `poll` immediately returns `Quiche.ERROR_CODE_DONE`. The application is responsible for handling incoming packets from the network and feeding packets data into connection before executing next `poll`.
+Note that `poll` would either execute callbacks and returns immediately. If there's not enough data to fire any of the events, `poll` immediately returns `Quiche.ErrorCode.DONE`. The application is responsible for handling incoming packets from the network and feeding packets data into connection before executing next `poll`.
 
 ### Examples
 
@@ -307,7 +307,7 @@ Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche
 
 ### Errors Hanlding
 
-Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic).
+Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic). See [`Quiche.ErrorCode`](src/main/java/io/quiche4j/Quiche.java) and [`Http3.ErrorCode`](src/main/java/io/quiche4j/http3/Http3.java) for more details.
 
 ## Implementation Details
 

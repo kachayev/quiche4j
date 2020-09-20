@@ -16,8 +16,58 @@ public final class Quiche {
 
     public static final String CONN_ID_SEED_ALGO = "HMACSHA256";
 
-    public static long ERROR_CODE_DONE = -1L;
-    public static long SUCCESS_CODE = 0L;
+    /**
+     * A listing of QUIC error codes.
+     */
+    public static final class ErrorCode {
+        // No errors. All good.
+        public static final short SUCCESS = 0;
+
+        // There is no more work to do.
+        public static final short DONE = -1;
+
+        // The provided buffer is too short.
+        public static final short BUFFER_TOO_SHORT = -2;
+
+        // The provided packet cannot be parsed because its version is unknown.
+        public static final short UNKNOWN_VERSION = -3;
+
+        // The provided packet cannot be parsed because it contains an invalid
+        // frame.
+        public static final short INVALID_FRAME = -4;
+
+        // The provided packet cannot be parsed.
+        public static final short INVALID_PACKET = -5;
+
+        // The operation cannot be completed because the connection is in an
+        // invalid state.
+        public static final short INVALID_STATE = -6;
+
+        // The operation cannot be completed because the stream is in an
+        // invalid state.
+        public static final short INVALID_STREAM_STATE = -7;
+
+        // The peer's transport params cannot be parsed.
+        public static final short INVALID_TRANSPORT_PARAM = -8;
+
+        // A cryptographic operation failed.
+        public static final short CRYPTO_FAIL = -9;
+
+        // The TLS handshake failed.
+        public static final short TLS_FAIL = -10;
+
+        // The peer violated the local flow control limits.
+        public static final short FLOW_CONTROL = -11;
+
+        // The peer violated the local stream limits.
+        public static final short STREAM_LIMIT = -12;
+
+        // The received data exceeds the stream's final size.
+        public static final short FINAL_SIZE = -13;
+
+        // Error in congestion control.
+        public static final short CONGESTION_CONTROL = -14;
+    }
 
     // Supported QUIC versions.
     //

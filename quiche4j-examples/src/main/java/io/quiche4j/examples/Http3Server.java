@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.quiche4j.Config;
 import io.quiche4j.ConfigBuilder;
 import io.quiche4j.Connection;
+import io.quiche4j.http3.Http3;
 import io.quiche4j.http3.Http3Config;
 import io.quiche4j.http3.Http3ConfigBuilder;
 import io.quiche4j.http3.Http3Connection;
@@ -106,7 +107,7 @@ public class Http3Server {
         final byte[] out = new byte[MAX_DATAGRAM_SIZE];
 
         final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
-            .withApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL)
+            .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
             // CAUTION: this should not be set to `false` in production
             .withVerifyPeer(false)
             .loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"))
@@ -242,7 +243,7 @@ public class Http3Server {
                 // POTENTIALLY COALESCED PACKETS
                 final Connection conn = client.connection();
                 final int read  = conn.recv(packetBuf);
-                if (read < 0 && read != Quiche.ERROR_CODE_DONE) {
+                if (read < 0 && read != Quiche.ErrorCode.DONE) {
                     System.out.println("> recv failed " + read);
                     break;
                 }
@@ -287,14 +288,14 @@ public class Http3Server {
                             }
                         });
 
-                        if (streamId < 0 && streamId != Quiche.ERROR_CODE_DONE) {
+                        if (streamId < 0 && streamId != Quiche.ErrorCode.DONE) {
                             System.out.println("! poll failed " + streamId);
 
                             // xxx(okachaiev): this should actially break from 2 loops
                             break;
                         }
                         // xxx(okachaiev): this should actially break from 2 loops
-                        if(Quiche.ERROR_CODE_DONE == streamId) break;
+                        if(Quiche.ErrorCode.DONE == streamId) break;
 
                         System.out.println("< poll " + streamId);
                     }
@@ -308,7 +309,7 @@ public class Http3Server {
 
                 while(true) {
                     len = conn.send(out);
-                    if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+                    if (len < 0 && len != Quiche.ErrorCode.DONE) {
                         System.out.println("! conn.send failed " + len);
                         break;
                     }
@@ -384,7 +385,7 @@ public class Http3Server {
         headers.add(new Http3Header(HEADER_NAME_CONTENT_LENGTH, Integer.toString(body.length)));
 
         final long sent = h3Conn.sendResponse(streamId, headers, false);
-        if (sent == Http3Connection.ERROR_CODE_HTTP3_STREAM_BLOCKED) {
+        if (sent == Http3.ErrorCode.STREAM_BLOCKED) {
             // STREAM BLOCKED
             System.out.print("> stream " + streamId + " blocked");
 
@@ -421,7 +422,7 @@ public class Http3Server {
         final Http3Connection h3 = client.http3Connection();
         if(null != resp.headers) {
             final long sent = h3.sendResponse(streamId, resp.headers, false);
-            if(sent == Http3Connection.ERROR_CODE_HTTP3_STREAM_BLOCKED) return;
+            if(sent == Http3.ErrorCode.STREAM_BLOCKED) return;
             if (sent < 0) {
                 System.out.println("! h3.send response failed " + sent);
                 return;
@@ -432,7 +433,7 @@ public class Http3Server {
 
         final byte[] body = Arrays.copyOfRange(resp.body, (int) resp.written, resp.body.length);
         final long written = h3.sendBody(streamId, body, true);
-        if (written < 0 && written != Quiche.ERROR_CODE_DONE) {
+        if (written < 0 && written != Quiche.ErrorCode.DONE) {
             System.out.println("! h3 send body failed " + written);
             return;
         }

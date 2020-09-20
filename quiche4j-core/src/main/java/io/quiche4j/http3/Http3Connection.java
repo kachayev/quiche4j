@@ -7,10 +7,6 @@ import io.quiche4j.Native;
 
 public final class Http3Connection {
 
-    public static final byte[] HTTP3_APPLICATION_PROTOCOL = "\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();
-
-    public static long ERROR_CODE_HTTP3_STREAM_BLOCKED = -13L;
-
     private final long ptr;
     private final Connection conn;
 

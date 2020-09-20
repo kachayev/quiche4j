@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.quiche4j.Config;
 import io.quiche4j.ConfigBuilder;
 import io.quiche4j.Connection;
+import io.quiche4j.http3.Http3;
 import io.quiche4j.http3.Http3Config;
 import io.quiche4j.http3.Http3ConfigBuilder;
 import io.quiche4j.http3.Http3Connection;
@@ -52,7 +53,7 @@ public class Http3Client {
         final InetAddress address = InetAddress.getByName(uri.getHost());
 
         final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
-            .withApplicationProtos(Http3Connection.HTTP3_APPLICATION_PROTOCOL)
+            .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
             // CAUTION: this should not be set to `false` in production
             .withVerifyPeer(false)
             .loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"))
@@ -74,7 +75,7 @@ public class Http3Client {
         int len = 0;
         final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
         len = conn.send(buffer);
-        if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+        if (len < 0 && len != Quiche.ErrorCode.DONE) {
             System.out.println("! handshake init problem " + len);
             System.exit(1);
             return;
@@ -105,7 +106,7 @@ public class Http3Client {
                     // xxx(okachaiev): if we extend `recv` API to with optional buf len,
                     // we could avoid Arrays.copy here
                     final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
-                    if (read < 0 && read != Quiche.ERROR_CODE_DONE) {
+                    if (read < 0 && read != Quiche.ErrorCode.DONE) {
                         System.out.println("> conn.recv failed " + read);
 
                         reading.set(false);
@@ -129,7 +130,7 @@ public class Http3Client {
 
                         public void onData(long streamId) {
                             final int bodyLength = h3c.recvBody(streamId, buffer);
-                            if (bodyLength < 0 && bodyLength != Quiche.ERROR_CODE_DONE) {
+                            if (bodyLength < 0 && bodyLength != Quiche.ErrorCode.DONE) {
                                 System.out.println("! recv body failed " + bodyLength);
                             } else {
                                 System.out.println("< got body " + bodyLength + " bytes for " + streamId);
@@ -145,13 +146,13 @@ public class Http3Client {
                         }
                     });
 
-                    if (streamId < 0 && streamId != Quiche.ERROR_CODE_DONE) {
+                    if (streamId < 0 && streamId != Quiche.ErrorCode.DONE) {
                         System.out.println("> poll failed " + streamId);
                         reading.set(false);
                         break;
                     }
 
-                    if(Quiche.ERROR_CODE_DONE == streamId) reading.set(false);
+                    if(Quiche.ErrorCode.DONE == streamId) reading.set(false);
                 }
             }
 
@@ -181,7 +182,7 @@ public class Http3Client {
             // WRITING LOOP
             while(true) {
                 len = conn.send(buffer);
-                if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+                if (len < 0 && len != Quiche.ErrorCode.DONE) {
                     System.out.println("! conn.send failed " + len);
                     break;
                 }

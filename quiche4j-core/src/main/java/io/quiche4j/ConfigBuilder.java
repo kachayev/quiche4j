@@ -109,13 +109,13 @@ public final class ConfigBuilder {
 
         if (null!= this.protos) {
             final int protosCode = Native.quiche_config_set_application_protos(pointer, this.protos);
-            if(Quiche.SUCCESS_CODE != protosCode)
+            if(Quiche.ErrorCode.SUCCESS != protosCode)
                 throw new IllegalArgumentException("Invalid application proto");
         }
 
         if (null != this.ccAlgorithmName) {
             final int ccAlgoCode = Native.quiche_config_set_cc_algorithm_name(pointer, this.ccAlgorithmName);
-            if(Quiche.SUCCESS_CODE != ccAlgoCode)
+            if(Quiche.ErrorCode.SUCCESS != ccAlgoCode)
                 throw new IllegalArgumentException("Invalid cc algorithm name");
         }
 

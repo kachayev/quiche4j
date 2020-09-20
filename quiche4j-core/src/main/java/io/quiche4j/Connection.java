@@ -106,7 +106,7 @@ public class Connection {
 
         private StreamIter(long ptr) {
             this.ptr = ptr;
-            this.nextId = Quiche.ERROR_CODE_DONE;
+            this.nextId = Quiche.ErrorCode.DONE;
             // xxx(okachaiev): is there a way not to call iter when creating
             // the object? :thinking:
             this.reload();
@@ -114,7 +114,7 @@ public class Connection {
 
         private void reload() {
             final long nextStreamId = Native.quiche_stream_iter_next(ptr);
-            if (Quiche.ERROR_CODE_DONE == nextStreamId) {
+            if (Quiche.ErrorCode.DONE == nextStreamId) {
                 this.hasNext = false;
             } else {
                 this.nextId = nextStreamId;
