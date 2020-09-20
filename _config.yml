@@ -1,3 +1,5 @@
+plugins:
+  - jekyll-remote-theme
 include:
   - README.md
 remote_theme: poole/hyde
