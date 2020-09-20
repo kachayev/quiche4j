@@ -300,12 +300,17 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1accept(
 ) -> jlong {
     let mut config = unsafe { &mut *(config_ptr as *mut Config) };
     let scid: Vec<u8> = env.convert_byte_array(scid_java).unwrap();
-    let buf = env.convert_byte_array(odcid_java).unwrap();
-    let odcid: Option<&[u8]> = match buf.len() {
-        0 => None,
-        _ => Some(&buf[..]),
+    let odcid: Option<Vec<u8>> = if odcid_java.is_null() {
+        None
+    } else {
+        let buf = env.convert_byte_array(odcid_java).unwrap();
+        match buf.len() {
+            0 => None,
+            _ => Some(buf),
+        }
     };
-    let conn = quiche::accept(&scid[..], odcid, &mut config).unwrap();
+    // xxx(okachaiev): propagate error to Java here
+    let conn = quiche::accept(&scid[..], odcid.as_ref().map(|id| &id[..]), &mut config).unwrap();
     Box::into_raw(Pin::into_inner(conn)) as jlong
 }
 
@@ -318,10 +323,15 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1connect(
     conn_id: jbyteArray,
     config_ptr: jlong,
 ) -> jlong {
-    let mut domain: String = env.get_string(domain).unwrap().into();
+    let domain: Option<String> = if domain.is_null() {
+        None
+    } else {
+        Some(convert_to_string(&env, domain).unwrap())
+    };
     let mut config = unsafe { &mut *(config_ptr as *mut Config) };
     let scid: Vec<u8> = env.convert_byte_array(conn_id).unwrap();
-    let conn = quiche::connect(Some(domain.as_mut_str()), &scid, &mut config).unwrap();
+    // xxx(okachaiev): propagate error to Java here
+    let conn = quiche::connect(domain.as_ref().map(String::as_str), &scid, &mut config).unwrap();
     Box::into_raw(Pin::into_inner(conn)) as jlong
 }
 
