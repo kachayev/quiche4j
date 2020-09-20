@@ -15,13 +15,13 @@ Maven:
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-core</artifactId>
-        <version>0.2.0</version>
+        <version>0.2.1</version>
     </dependency>
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>linux_x64_86</classifier>
-        <version>0.2.0</version>
+        <version>0.2.1</version>
     </dependency>
 </dependencies>
 ```
@@ -43,7 +43,7 @@ Note that `quiche4j-jni` contains native library and should be installed with pr
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>${os.detected.classifier}</classifier>
-        <version>0.2.0</version>
+        <version>0.2.1</version>
     </dependency>
 </dependencies>
 ```
@@ -88,7 +88,7 @@ $ cargo build --release --manifest-path quiche4j-jni/Cargo.toml
 $ mvn clean install
 $ java \
     -Djava.library.path=quiche4j-jni/target/release/ \
-    -cp quiche4j-examples/target/quiche4j-examples-0.2.0-SNAPSHOT.jar \
+    -cp quiche4j-examples/target/quiche4j-examples-*.jar \
     io.quiche4j.examples.Http3Server
 ```
 
