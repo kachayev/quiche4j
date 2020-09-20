@@ -34,7 +34,7 @@ public class Http3Client {
 
     public static void main(String[] args) throws UnknownHostException, IOException {
         if(0 == args.length) {
-            System.out.println("Usage: ./h3-client.sh <URL>");
+            System.out.println("Usage: ./http3-client.sh <URL>");
             System.exit(1);
         }
 
