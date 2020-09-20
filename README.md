@@ -15,13 +15,13 @@ Maven:
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-core</artifactId>
-        <version>0.2.1</version>
+        <version>0.2.2</version>
     </dependency>
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>linux_x64_86</classifier>
-        <version>0.2.1</version>
+        <version>0.2.2</version>
     </dependency>
 </dependencies>
 ```
@@ -43,7 +43,7 @@ Note that `quiche4j-jni` contains native library and should be installed with pr
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>${os.detected.classifier}</classifier>
-        <version>0.2.1</version>
+        <version>0.2.2</version>
     </dependency>
 </dependencies>
 ```

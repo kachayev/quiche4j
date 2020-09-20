@@ -4,12 +4,12 @@
   <parent>
     <groupId>io.quiche4j</groupId>
     <artifactId>quiche4j</artifactId>
-    <version>0.2.1</version>
+    <version>0.2.2</version>
   </parent>
   <artifactId>quiche4j-core</artifactId>
   <name>Quiche4j/Core</name>
   <packaging>jar</packaging>
-  <version>0.2.1</version>
+  <version>0.2.2</version>
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
