@@ -1,5 +1,5 @@
 include:
   - README.md
-theme: hyde
+theme: jekyll-theme-minimal
 title: Quiche4
 description: Java implementation of the QUIC transport protocol and HTTP/3.
