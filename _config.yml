@@ -1,6 +1,6 @@
 include:
   - README.md
-remote_theme: karloespiritu/BlackDoc
+remote_theme: poole/hyde
 title: Quiche4j
 description: Java implementation of the QUIC transport protocol and HTTP/3.
 author:
