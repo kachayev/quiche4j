@@ -309,9 +309,10 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1accept(
             _ => Some(buf),
         }
     };
-    // xxx(okachaiev): propagate error to Java here
-    let conn = quiche::accept(&scid[..], odcid.as_ref().map(|id| &id[..]), &mut config).unwrap();
-    Box::into_raw(Pin::into_inner(conn)) as jlong
+    match quiche::accept(&scid[..], odcid.as_ref().map(|id| &id[..]), &mut config) {
+        Ok(conn) => Box::into_raw(Pin::into_inner(conn)) as jlong,
+        Err(e) => e as jlong,
+    }
 }
 
 #[no_mangle]
@@ -330,9 +331,10 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1connect(
     };
     let mut config = unsafe { &mut *(config_ptr as *mut Config) };
     let scid: Vec<u8> = env.convert_byte_array(conn_id).unwrap();
-    // xxx(okachaiev): propagate error to Java here
-    let conn = quiche::connect(domain.as_ref().map(String::as_str), &scid, &mut config).unwrap();
-    Box::into_raw(Pin::into_inner(conn)) as jlong
+    match quiche::connect(domain.as_ref().map(String::as_str), &scid, &mut config) {
+        Ok(conn) => Box::into_raw(Pin::into_inner(conn)) as jlong,
+        Err(e) => e as jlong,
+    }
 }
 
 #[no_mangle]

@@ -15,13 +15,13 @@ Maven:
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-core</artifactId>
-        <version>0.2.2</version>
+        <version>0.2.3</version>
     </dependency>
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>linux_x64_86</classifier>
-        <version>0.2.2</version>
+        <version>0.2.3</version>
     </dependency>
 </dependencies>
 ```
@@ -43,7 +43,7 @@ Note that `quiche4j-jni` contains native library and should be installed with pr
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>${os.detected.classifier}</classifier>
-        <version>0.2.2</version>
+        <version>0.2.3</version>
     </dependency>
 </dependencies>
 ```
@@ -308,6 +308,8 @@ Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche
 ### Errors Hanlding
 
 Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic). See [`Quiche.ErrorCode`](src/main/java/io/quiche4j/Quiche.java) and [`Http3.ErrorCode`](src/main/java/io/quiche4j/http3/Http3.java) for more details.
+
+Unlike other methods, `Quiche.connect` and `Quiche.accept` throw `ConnectionFailureException` if JNI code failed before `quiche::Connection` struct had been allocated. In this case there's no pointer to carry around, thus Java code does not create `Connection` object.
 
 ## Implementation Details
 
