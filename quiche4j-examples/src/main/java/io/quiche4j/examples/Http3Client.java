@@ -55,7 +55,7 @@ public class Http3Client {
         final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
             .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
             // CAUTION: this should not be set to `false` in production
-            .withVerifyPeer(false)
+            .withVerifyPeer(true)
             .loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"))
             .loadPrivKeyFromPemFile(Utils.copyFileFromJAR("certs", "/cert.key"))
             .withMaxIdleTimeout(5_000)

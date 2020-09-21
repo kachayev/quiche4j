@@ -247,13 +247,20 @@ public final class Quiche {
     /**
      * Creates a new server-side connection.
      *
-     * <p>The {@code sourceConnId} parameter represents the server's source connection
+     * <p>
+     * The {@code sourceConnId} parameter represents the server's source connection
      * ID, while the optional {@code originalDestinationConnId} parameter represents
      * the original destination ID the client sent before a stateless retry (this is
      * only required when using the {@link Quiche#retry} function).
+     * 
+     * @throws ConnectionFailureException
      */
-    public static final Connection accept(byte[] sourceConnId, byte[] originalDestinationConnId, Config config) {
+    public static final Connection accept(byte[] sourceConnId, byte[] originalDestinationConnId, Config config)
+            throws ConnectionFailureException {
         final long ptr = Native.quiche_accept(sourceConnId, originalDestinationConnId, config.getPointer());
+        if (ptr <= ErrorCode.SUCCESS) {
+            throw new ConnectionFailureException(ptr);
+        }
         return Connection.newInstance(ptr);
     }
 
@@ -263,9 +270,15 @@ public final class Quiche {
      * The {@code sourceConnId} parameter is used as the connection's source
      * connection ID, while the optional {@code serverName} parameter is used to
      * verify the peer's certificate.
+     * 
+     * @throws ConnectionFailureException
      */
-    public static final Connection connect(String serverName, byte[] connId, Config config) {
+    public static final Connection connect(String serverName, byte[] connId, Config config)
+            throws ConnectionFailureException {
         final long ptr = Native.quiche_connect(serverName, connId, config.getPointer());
+        if (ptr <= ErrorCode.SUCCESS) {
+            throw new ConnectionFailureException(ptr);
+        }
         return Connection.newInstance(ptr);
     }
 
