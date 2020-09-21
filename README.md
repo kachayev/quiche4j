@@ -319,6 +319,18 @@ Unlike other methods, `Quiche.connect` and `Quiche.accept` throw `ConnectionFail
 
 * Proxy Java objects maintain a handle (pointer) to the corresponding Rust struct to maximise compatability with all `quiche` features. A single instance of a `Cleaner` is statically defined in `io.quiche4j.Native` class and is used to register all deallocation callback (conventionally called `free` for each class that maintains a native pointer).
 
+## Contribute
+
+* Check for open issues or open a fresh issue to start a discussion around a feature idea or a bug (also, check out "TODO" section of this document).
+* Fork the repository on Github & fork master to `feature-*` branch to start making your changes.
+* Write a test which shows that the bug was fixed or that the feature works as expected.
+
+or simply...
+
+* Use it.
+* Enjoy it.
+* Spread the word.
+
 ## TODO
 
 There are still a few `xxx` comments in the code. Both for Java and for Rust. Plus, there are a few methods that are not exposed to Java layer. Notably, operations with stream priorities and HTTP/3 connection configuration (some of those would require to extend `quiche` library as well).
