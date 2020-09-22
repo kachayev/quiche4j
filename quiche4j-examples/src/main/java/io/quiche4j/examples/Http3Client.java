@@ -33,7 +33,7 @@ public class Http3Client {
     public static final String CLIENT_NAME = "Quiche4j";
 
     public static void main(String[] args) throws UnknownHostException, IOException {
-        if(0 == args.length) {
+        if (0 == args.length) {
             System.out.println("Usage: ./http3-client.sh <URL>");
             System.exit(1);
         }
@@ -69,7 +69,7 @@ public class Http3Client {
             .withDisableActiveMigration(true)
             .build();
 
-		final byte[] connId = Quiche.newConnectionId();
+        final byte[] connId = Quiche.newConnectionId();
         final Connection conn = Quiche.connect(uri.getHost(), connId, config);
 
         int len = 0;
@@ -80,12 +80,12 @@ public class Http3Client {
             System.exit(1);
             return;
         }
-		System.out.println("> handshake size: " + len);
+        System.out.println("> handshake size: " + len);
 
-		final DatagramPacket handshakePacket = new DatagramPacket(buffer, len, address, port);
+        final DatagramPacket handshakePacket = new DatagramPacket(buffer, len, address, port);
         final DatagramSocket socket = new DatagramSocket(0);
         socket.setSoTimeout(200);
-		socket.send(handshakePacket);
+        socket.send(handshakePacket);
 
         Long streamId = null;
         final AtomicBoolean reading = new AtomicBoolean(true);
@@ -93,9 +93,9 @@ public class Http3Client {
         DatagramPacket packet;
         Http3Connection h3Conn = null;
 
-        while(!conn.isClosed()) {
+        while (!conn.isClosed()) {
             // READING LOOP
-            while(reading.get()) {
+            while (reading.get()) {
                 packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     socket.receive(packet);
@@ -119,7 +119,7 @@ public class Http3Client {
                 }
 
                 // POLL
-                if(null != h3Conn) {
+                if (null != h3Conn) {
                     final Http3Connection h3c = h3Conn;
                     streamId = h3c.poll(new Http3EventListener() {
                         public void onHeaders(long streamId, List<Http3Header> headers, boolean hasBody) {
@@ -152,11 +152,12 @@ public class Http3Client {
                         break;
                     }
 
-                    if(Quiche.ErrorCode.DONE == streamId) reading.set(false);
+                    if (Quiche.ErrorCode.DONE == streamId)
+                        reading.set(false);
                 }
             }
 
-            if(conn.isClosed()) {
+            if (conn.isClosed()) {
                 System.out.println("! conn is closed " + conn.stats());
 
                 socket.close();
@@ -164,7 +165,7 @@ public class Http3Client {
                 return;
             }
 
-            if(conn.isEstablished() && null == h3Conn) {
+            if (conn.isEstablished() && null == h3Conn) {
                 h3Conn = Http3Connection.withTransport(conn, h3Config);
 
                 System.out.println("! h3 conn is established");
@@ -180,19 +181,20 @@ public class Http3Client {
             }
 
             // WRITING LOOP
-            while(true) {
+            while (true) {
                 len = conn.send(buffer);
                 if (len < 0 && len != Quiche.ErrorCode.DONE) {
                     System.out.println("! conn.send failed " + len);
                     break;
                 }
-                if (len <= 0) break;
-                System.out.println("> conn.send "+ len + " bytes");
+                if (len <= 0)
+                    break;
+                System.out.println("> conn.send " + len + " bytes");
                 packet = new DatagramPacket(buffer, len, address, port);
                 socket.send(packet);
             }
 
-            if(conn.isClosed()) {
+            if (conn.isClosed()) {
                 System.out.println("! conn is closed " + conn.stats());
 
                 socket.close();
