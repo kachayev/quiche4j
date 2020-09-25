@@ -4,7 +4,7 @@
   <groupId>io.quiche4j</groupId>
   <artifactId>quiche4j</artifactId>
   <packaging>pom</packaging>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.2.3</version>
   <name>quiche4j</name>
   <url>https://github.com/kachayev/quiche4j</url>
   <developers>
@@ -13,6 +13,13 @@
       <name>Oleksii Kachaiev</name>
     </developer>
   </developers>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/kachayev/quiche4j</url>
+    </repository>
+  </distributionManagement>
   <modules>
     <module>quiche4j-jni</module>
     <module>quiche4j-core</module>
@@ -47,6 +54,52 @@
         <configuration>
           <source>1.9</source>
           <target>1.9</target>
+        </configuration>
+      </plugin>
+      <!-- Generate Xref -->
+      <plugin>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>generate-xref</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jxr</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <linkJavadoc>true</linkJavadoc>
+          <destDir>${project.build.directory}/xref</destDir>
+          <javadocDir>${project.build.directory}/api</javadocDir>
+          <docTitle>Quiche4j Source Xref (${project.version})</docTitle>
+          <windowTitle>Quiche4j Source Xref (${project.version})</windowTitle>
+        </configuration>
+      </plugin>
+      <!-- Generate Javadoc -->
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>${quickbuild}</skip>
+          <excludePackageNames>*.Native*,*.examples</excludePackageNames>
+          <docfilessubdirs>true</docfilessubdirs>
+          <outputDirectory>${project.build.directory}/api</outputDirectory>
+          <overview>${project.basedir}/src/javadoc/overview.html</overview>
+          <doctitle>Quiche4j API Reference ${project.version}</doctitle>
+          <windowtitle>Quiche4j API Reference ${project.version}</windowtitle>
+          <detectJavaApiLink>false</detectJavaApiLink>
+          <failOnError>false</failOnError>
+          <locale>en_US</locale>
         </configuration>
       </plugin>
     </plugins>

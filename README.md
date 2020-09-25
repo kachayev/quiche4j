@@ -15,13 +15,13 @@ Maven:
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-core</artifactId>
-        <version>0.2.0</version>
+        <version>0.2.3</version>
     </dependency>
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>linux_x64_86</classifier>
-        <version>0.2.0</version>
+        <version>0.2.3</version>
     </dependency>
 </dependencies>
 ```
@@ -43,7 +43,7 @@ Note that `quiche4j-jni` contains native library and should be installed with pr
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>${os.detected.classifier}</classifier>
-        <version>0.2.0</version>
+        <version>0.2.3</version>
     </dependency>
 </dependencies>
 ```
@@ -88,7 +88,7 @@ $ cargo build --release --manifest-path quiche4j-jni/Cargo.toml
 $ mvn clean install
 $ java \
     -Djava.library.path=quiche4j-jni/target/release/ \
-    -cp quiche4j-examples/target/quiche4j-examples-0.2.0-SNAPSHOT.jar \
+    -cp quiche4j-examples/target/quiche4j-examples-*.jar \
     io.quiche4j.examples.Http3Server
 ```
 
@@ -103,7 +103,10 @@ For cross-compilation options, see `cargo build` [documentation](https://doc.rus
 Before establishing a QUIC connection, you need to create a configuration object:
 
 ```java
-final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
+import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
+
+final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION).build();
 ```
 
 On the client-side the `Quiche.connect` utility function can be used to create a new connection, while `Quiche.accept` is for servers:
@@ -111,6 +114,8 @@ On the client-side the `Quiche.connect` utility function can be used to create a
 ```java
 // client
 final byte[] connId = Quiche.newConnectionId();
+// note, that "quic.tech" here is not used for establishing network
+// connection. it's used only for peer verification (thus, optional)
 final Connection conn = Quiche.connect("quic.tech", connId, config);
 
 // server
@@ -128,7 +133,7 @@ while(true) {
     try {
         // read from the socket
         socket.receive(packet);
-        final byte[] buffer = Arrays.copyOfRange(packet.getData(), 0, packet.getLength());
+        final byte[] buffer = Arrays.copyOfRange(packet.getData(), packet.getOffset(), packet.getLength());
         // update the connection state
         final int read = conn.recv(buffer);
         if(read <= 0) break;
@@ -209,23 +214,33 @@ The library provides a high level API for sending and receiving HTTP/3 requests 
 
 ### Connection
 
-HTTP/3 connections require a QUIC transport-layer connection, see "Connection" for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
+HTTP/3 connections require a QUIC transport-layer connection, see ["Connection"](#Connection) for a full description of the setup process. To use HTTP/3, the QUIC connection must be configured with a suitable ALPN Protocol ID:
 
 ```java
-final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
-config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
+import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
+import io.quiche4j.http3.Http3Connection;
+
+final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
+    .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
+    .build();
 ```
 
 The QUIC handshake is driven by sending and receiving QUIC packets. Once the handshake has completed, the first step in establishing an HTTP/3 connection is creating its configuration object:
 
 ```java
-final H3Config h3Config = H3Config.newInstance();
+import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3ConfigBuilder;
+
+final Http3Config h3Config = new Http3ConfigBuilder().build();
 ```
 
-HTTP/3 client and server connections are both created using the `H3Connection.withTtransport` function:
+HTTP/3 client and server connections are both created using the `Http3Connection.withTransport` function:
 
 ```java
-final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
+import io.quiche4j.http3.Http3Connection;
+
+final Http3Connection h3Conn = Http3Connection.withTransport(conn, h3Config);
 ```
 
 ### Sending Request
@@ -233,12 +248,14 @@ final H3Connection h3Conn = H3Connection.withTransport(conn, h3Config);
 An HTTP/3 client can send a request by using the connection's `sendRequest` method to queue request headers; sending QUIC packets causes the requests to get sent to the peer:
 
 ```java
-List<H3Header> req = new ArrayList<H3Header>();
-req.add(new H3Header(":method", "GET"));
-req.add(new H3Header(":scheme", "https"));
-req.add(new H3Header(":authority", "quic.tech"));
-req.add(new H3Header(":path", "/"));
-req.add(new H3Header("user-agent", "Quiche4j"));
+import io.quiche4j.http3.Http3Header;
+
+List<Http3Header> req = new ArrayList<>();
+req.add(new Http3Header(":method", "GET"));
+req.add(new Http3Header(":scheme", "https"));
+req.add(new Http3Header(":authority", "quic.tech"));
+req.add(new Http3Header(":path", "/"));
+req.add(new Http3Header("user-agent", "Quiche4j"));
 h3Conn.sendRequest(req, true);
 ```
 
@@ -253,12 +270,15 @@ h3Conn.sendBody(streamId, "Hello there!".getBytes(), true);
 
 After receiving QUIC packets, HTTP/3 data is processed using the connection's `poll` method.
 
-An HTTP/3 server uses `poll` to read requests and responds to them, an HTTP/3 client uses `poll` to read responses. `poll` method accepts object that implements `H3PollEvent` interface defining callbacks for different type of events 
+An HTTP/3 server uses `poll` to read requests and responds to them, an HTTP/3 client uses `poll` to read responses. `poll` method accepts object that implements `Http3EventListener` interface defining callbacks for different type of events 
 
 ```java
-final Long streamId = h3Conn.poll(new H3PollEvent() {
-    public void onHeader(long streamId, String name, String value) {
-        // got header
+import io.quiche4j.http3.Http3EventListener;
+import io.quiche4j.http3.Http3Header;
+
+final long streamId = h3Conn.poll(new Http3EventListener() {
+    public void onHeaders(long streamId, List<Http3Header> headers) {
+        // got headers
     }
 
     public void onData(long streamId) {
@@ -273,12 +293,13 @@ final Long streamId = h3Conn.poll(new H3PollEvent() {
     }
 });
 
-if(null == streamId) {
+if(Quiche.ErrorCode.DONE == streamId) {
     // this means no event was emitted
+    // it would take more packets to proceed with new events
 }
 ```
 
-Note that `poll` would either execute callbacks and returns immediately. If there's not enough data to fire any of the events, `poll` immediately returns `null`. The application is responsible for handling incoming packets from the network and feeding packets data into connection before executing next `poll`.
+Note that `poll` would either execute callbacks and returns immediately. If there's not enough data to fire any of the events, `poll` immediately returns `Quiche.ErrorCode.DONE`. The application is responsible for handling incoming packets from the network and feeding packets data into connection before executing next `poll`.
 
 ### Examples
 
@@ -286,22 +307,40 @@ Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche
 
 ### Errors Hanlding
 
-Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic).
+Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic). See [`Quiche.ErrorCode`](src/main/java/io/quiche4j/Quiche.java) and [`Http3.ErrorCode`](src/main/java/io/quiche4j/http3/Http3.java) for more details.
+
+Unlike other methods, `Quiche.connect` and `Quiche.accept` throw `ConnectionFailureException` if JNI code failed before `quiche::Connection` struct had been allocated. In this case there's no pointer to carry around, thus Java code does not create `Connection` object.
 
 ## Implementation Details
 
-* Module [Native.java](src/main/java/io/quiche4j/Native.java) contains definition of all native calls
+* Modules [Native.java](src/main/java/io/quiche4j/Native.java) and [Http3Native.java](src/main/java/io/quiche4j/http3/Http3Native.java) contains definition of all native calls, structurally close to `quiche`'s [`src/ffi.rs`](https://github.com/cloudflare/quiche/blob/master/src/ffi.rs) and [`src/h3/ffi.rs`](https://github.com/cloudflare/quiche/blob/master/src/h3/ffi.rs) respectively.
 
-* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using [`rust-jni`](https://docs.rs/jni/0.17.0/jni/) library
+* JNI calls are implmeneted in Rust (see [quiche4j-jni](quiche4j-jni/) for more details) using [`rust-jni`](https://docs.rs/jni/0.17.0/jni/) library. The goal was to stick to primitive types as much as possible and avoid Java objects manipulations in native code. There are still a few exceptions from this rule, e.g. operations with connection `Stats`, management of `Http3Header` lists, etc.
 
-* Proxy Java objects maintain a handle to corresponding Rust struct to maximise compatability with all `quiche` features 
+* Proxy Java objects maintain a handle (pointer) to the corresponding Rust struct to maximise compatability with all `quiche` features. A single instance of a `Cleaner` is statically defined in `io.quiche4j.Native` class and is used to register all deallocation callback (conventionally called `free` for each class that maintains a native pointer).
+
+## Contribute
+
+* Check for open issues or open a fresh issue to start a discussion around a feature idea or a bug (also, check out "TODO" section of this document).
+* Fork the repository on Github & fork master to `feature-*` branch to start making your changes.
+* Write a test which shows that the bug was fixed or that the feature works as expected.
+
+or simply...
+
+* Use it.
+* Enjoy it.
+* Spread the word.
 
 ## TODO
 
-- [ ] Documentation (like... a lot)
-- [ ] Propagate Rust panics into Java exceptions, think twice about error codes vs. throwables
-- [ ] All "xxx" comments both from Java and Rust code
-- [ ] Public Maven and Cargo artifacts, generate JAR with os-dependent classifiers
+There are still a few `xxx` comments in the code. Both for Java and for Rust. Plus, there are a few methods that are not exposed to Java layer. Notably, operations with stream priorities and HTTP/3 connection configuration (some of those would require to extend `quiche` library as well).
+
+Other ideas to work on:
+
+- [ ] Propagate Rust panics into Java exceptions (when necessary)
+- [ ] Setup integration testing suite against different QUIC implementations out there
+- [ ] Qlog support
+- [ ] Experiment with in-memory serialization (Arrow?) to deal with (presumably) high overhead of manipulating objects in native code
 
 ## Copyright
 

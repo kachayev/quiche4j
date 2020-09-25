@@ -1,19 +1,50 @@
 package io.quiche4j;
 
+/**
+ * Statistics about the connection.
+ *
+ * A connections's statistics can be collected using the {@link Connection#stats()} method.
+ */
 public final class Stats {
 
+    /**
+     * The number of QUIC packets received on this connection.
+     */
     private int recv;
+
+    /**
+     * The number of QUIC packets sent on this connection.    
+     */
     private int sent;
+
+    /**
+     * The number of QUIC packets that were lost.    
+     */
     private int lost;
+
+    /**
+     * The estimated round-trip time of the connection.    
+     */
     private long rtt;
+
+    /**
+     * The size of the connection's congestion window in bytes.    
+     */
     private int cwnd;
+
+    /**
+     * The estimated data delivery rate in bytes/s.
+     */
     private long deliveryRate;
 
-    protected Stats() {
+    /**
+     * The constructor is executed from JNI code only.
+     */
+    Stats() {
         // no-op
     }
 
-    public final int getRecv() {
+    public final int recv() {
         return this.recv;
     }
 
@@ -21,7 +52,7 @@ public final class Stats {
         this.recv = recv;
     }
 
-    public final int getSent() {
+    public final int sent() {
         return this.sent;
     }
 
@@ -29,7 +60,7 @@ public final class Stats {
         this.sent = sent;
     }
 
-    public final int getLost() {
+    public final int lost() {
         return this.lost;
     }
 
@@ -37,7 +68,7 @@ public final class Stats {
         this.lost = lost;
     }
 
-    public final long getRtt() {
+    public final long rtt() {
         return this.rtt;
     }
 
@@ -45,7 +76,7 @@ public final class Stats {
         this.rtt = rtt;
     }
 
-    public final int getCwnd() {
+    public final int cwnd() {
         return this.cwnd;
     }
 
@@ -53,7 +84,7 @@ public final class Stats {
         this.cwnd = cwnd;
     }
 
-    public final long getDeliveryRate() {
+    public final long deliveryRate() {
         return this.deliveryRate;
     }
 

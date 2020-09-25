@@ -1,0 +1,11 @@
+plugins:
+  - jekyll-remote-theme
+include:
+  - README.md
+remote_theme: fongandrew/hydeout
+title: Quiche4j
+description: Java implementation of the QUIC transport protocol and HTTP/3.
+author:
+  name: Oleksii Kachaiev
+  url: https://github.com/kachayev
+  email: kachayev@gmail.com

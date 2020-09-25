@@ -1,24 +1,23 @@
 package io.quiche4j;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URL;
 
-class NativeUtils {
+/**
+ * Helper functionality to try to resolve native library from JAR
+ * in case when a system dependency is not available.
+ */
+public final class NativeUtils {
 
     private static final String DEFAUL_DIR = "/native-libs/";
 
     private static final String[] ALLOWED_EXTENTIONS = new String[]{"so", "dylib", "dll"};
 
-    protected static void loadEmbeddedLibrary(String libname) {
+    public static void loadEmbeddedLibrary(String libname) {
         loadEmbeddedLibrary(DEFAUL_DIR, libname);
     }
 
-    protected static void loadEmbeddedLibrary(String dir, String libname) {
+    public static void loadEmbeddedLibrary(String dir, String libname) {
         final String filename = "lib" + libname;
 
         String nativeLibraryFilepath = null;

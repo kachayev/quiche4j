@@ -1,6 +1,5 @@
 package io.quiche4j.examples;
 
-import io.quiche4j.ConfigError;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -16,12 +15,16 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.quiche4j.Config;
+import io.quiche4j.ConfigBuilder;
 import io.quiche4j.Connection;
-import io.quiche4j.H3Config;
-import io.quiche4j.H3Connection;
-import io.quiche4j.H3PollEvent;
-import io.quiche4j.H3Header;
+import io.quiche4j.http3.Http3;
+import io.quiche4j.http3.Http3Config;
+import io.quiche4j.http3.Http3ConfigBuilder;
+import io.quiche4j.http3.Http3Connection;
+import io.quiche4j.http3.Http3EventListener;
+import io.quiche4j.http3.Http3Header;
 import io.quiche4j.Quiche;
+import io.quiche4j.Utils;
 
 public class Http3Client {
 
@@ -30,8 +33,8 @@ public class Http3Client {
     public static final String CLIENT_NAME = "Quiche4j";
 
     public static void main(String[] args) throws UnknownHostException, IOException {
-        if(0 == args.length) {
-            System.out.println("Usage: ./h3-client.sh <URL>");
+        if (0 == args.length) {
+            System.out.println("Usage: ./http3-client.sh <URL>");
             System.exit(1);
         }
 
@@ -49,55 +52,50 @@ public class Http3Client {
         final int port = uri.getPort();
         final InetAddress address = InetAddress.getByName(uri.getHost());
 
-        final Config config = Config.newInstance(Quiche.PROTOCOL_VERSION);
+        final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
+            .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
+            // CAUTION: this should not be set to `false` in production
+            .withVerifyPeer(true)
+            .loadCertChainFromPemFile(Utils.copyFileFromJAR("certs", "/cert.crt"))
+            .loadPrivKeyFromPemFile(Utils.copyFileFromJAR("certs", "/cert.key"))
+            .withMaxIdleTimeout(5_000)
+            .withMaxUdpPayloadSize(MAX_DATAGRAM_SIZE)
+            .withInitialMaxData(10_000_000)
+            .withInitialMaxStreamDataBidiLocal(1_000_000)
+            .withInitialMaxStreamDataBidiRemote(1_000_000)
+            .withInitialMaxStreamDataUni(1_000_000)
+            .withInitialMaxStreamsBidi(100)
+            .withInitialMaxStreamsUni(100)
+            .withDisableActiveMigration(true)
+            .build();
 
-        try {
-            config.setApplicationProtos(Quiche.H3_APPLICATION_PROTOCOL);
-        } catch (ConfigError e) {
-            System.out.println("! wrong protocol " + e.getErrorCode());
-            System.exit(1);
-            return;
-        }
-
-        // CAUTION: this should not be set to `false` in production
-        config.verityPeer(false);
-        config.setMaxIdleTimeout(5000);
-        config.setMaxUdpPayloadSize(MAX_DATAGRAM_SIZE);
-        config.setInitialMaxData(10_000_000);
-        config.setInitialMaxStreamDataBidiLocal(1_000_000);
-        config.setInitialMaxStreamDataBidiRemote(1_000_000);
-        config.setInitialMaxStreamDataUni(1_000_000);
-        config.setInitialMaxStreamsBidi(100);
-        config.setInitialMaxStreamsUni(100);
-        config.setDisableActiveMigration(true);
-
-		final byte[] connId = Quiche.newConnectionId();
+        final byte[] connId = Quiche.newConnectionId();
         final Connection conn = Quiche.connect(uri.getHost(), connId, config);
 
         int len = 0;
         final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
         len = conn.send(buffer);
-        if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+        if (len < 0 && len != Quiche.ErrorCode.DONE) {
             System.out.println("! handshake init problem " + len);
             System.exit(1);
             return;
         }
-		System.out.println("> handshake size: " + len);
+        System.out.println("> handshake size: " + len);
 
-		final DatagramPacket handshakePacket = new DatagramPacket(buffer, len, address, port);
-        final DatagramSocket socket = new DatagramSocket(10002);
+        final DatagramPacket handshakePacket = new DatagramPacket(buffer, len, address, port);
+        final DatagramSocket socket = new DatagramSocket(0);
         socket.setSoTimeout(200);
-		socket.send(handshakePacket);
+        socket.send(handshakePacket);
 
         Long streamId = null;
         final AtomicBoolean reading = new AtomicBoolean(true);
-        final H3Config h3Config = H3Config.newInstance();
-        DatagramPacket packet; 
-        H3Connection h3Conn = null;
+        final Http3Config h3Config = new Http3ConfigBuilder().build();
+        DatagramPacket packet;
+        Http3Connection h3Conn = null;
 
-        while(!conn.isClosed()) {
+        while (!conn.isClosed()) {
             // READING LOOP
-            while(reading.get()) {
+            while (reading.get()) {
                 packet = new DatagramPacket(buffer, buffer.length);
                 try {
                     socket.receive(packet);
@@ -107,8 +105,8 @@ public class Http3Client {
 
                     // xxx(okachaiev): if we extend `recv` API to with optional buf len,
                     // we could avoid Arrays.copy here
-                    final int read = conn.recv(Arrays.copyOfRange(packet.getData(), 0, recvBytes));
-                    if (read < 0 && read != Quiche.ERROR_CODE_DONE) {
+                    final int read = conn.recv(Arrays.copyOfRange(packet.getData(), packet.getOffset(), recvBytes));
+                    if (read < 0 && read != Quiche.ErrorCode.DONE) {
                         System.out.println("> conn.recv failed " + read);
 
                         reading.set(false);
@@ -121,16 +119,18 @@ public class Http3Client {
                 }
 
                 // POLL
-                if(null != h3Conn) {
-                    final H3Connection h3c = h3Conn;
-                    streamId = h3c.poll(new H3PollEvent() {
-                        public void onHeader(long _streamId, String name, String value) {
-                            System.out.println(name + ": " + value);
+                if (null != h3Conn) {
+                    final Http3Connection h3c = h3Conn;
+                    streamId = h3c.poll(new Http3EventListener() {
+                        public void onHeaders(long streamId, List<Http3Header> headers, boolean hasBody) {
+                            headers.forEach(header -> {
+                                System.out.println(header.name() + ": " + header.value());
+                            });
                         }
 
                         public void onData(long streamId) {
                             final int bodyLength = h3c.recvBody(streamId, buffer);
-                            if (bodyLength < 0 && bodyLength != Quiche.ERROR_CODE_DONE) {
+                            if (bodyLength < 0 && bodyLength != Quiche.ErrorCode.DONE) {
                                 System.out.println("! recv body failed " + bodyLength);
                             } else {
                                 System.out.println("< got body " + bodyLength + " bytes for " + streamId);
@@ -146,17 +146,18 @@ public class Http3Client {
                         }
                     });
 
-                    if (streamId < 0 && streamId != Quiche.ERROR_CODE_DONE) {
+                    if (streamId < 0 && streamId != Quiche.ErrorCode.DONE) {
                         System.out.println("> poll failed " + streamId);
                         reading.set(false);
                         break;
                     }
 
-                    if(Quiche.ERROR_CODE_DONE == streamId) reading.set(false);
+                    if (Quiche.ErrorCode.DONE == streamId)
+                        reading.set(false);
                 }
             }
 
-            if(conn.isClosed()) {
+            if (conn.isClosed()) {
                 System.out.println("! conn is closed " + conn.stats());
 
                 socket.close();
@@ -164,35 +165,36 @@ public class Http3Client {
                 return;
             }
 
-            if(conn.isEstablished() && null == h3Conn) {
-                h3Conn = H3Connection.withTransport(conn, h3Config);
+            if (conn.isEstablished() && null == h3Conn) {
+                h3Conn = Http3Connection.withTransport(conn, h3Config);
 
                 System.out.println("! h3 conn is established");
 
-                List<H3Header> req = new ArrayList<H3Header>();
-                req.add(new H3Header(":method", "GET"));
-                req.add(new H3Header(":scheme", uri.getScheme()));
-                req.add(new H3Header(":authority", uri.getAuthority()));
-                req.add(new H3Header(":path", uri.getPath()));
-                req.add(new H3Header("user-agent", CLIENT_NAME));
-                req.add(new H3Header("content-length", "0"));
+                List<Http3Header> req = new ArrayList<>();
+                req.add(new Http3Header(":method", "GET"));
+                req.add(new Http3Header(":scheme", uri.getScheme()));
+                req.add(new Http3Header(":authority", uri.getAuthority()));
+                req.add(new Http3Header(":path", uri.getPath()));
+                req.add(new Http3Header("user-agent", CLIENT_NAME));
+                req.add(new Http3Header("content-length", "0"));
                 h3Conn.sendRequest(req, true);
             }
 
             // WRITING LOOP
-            while(true) {
+            while (true) {
                 len = conn.send(buffer);
-                if (len < 0 && len != Quiche.ERROR_CODE_DONE) {
+                if (len < 0 && len != Quiche.ErrorCode.DONE) {
                     System.out.println("! conn.send failed " + len);
                     break;
                 }
-                if (len <= 0) break;
-                System.out.println("> conn.send "+ len + " bytes");
+                if (len <= 0)
+                    break;
+                System.out.println("> conn.send " + len + " bytes");
                 packet = new DatagramPacket(buffer, len, address, port);
                 socket.send(packet);
             }
 
-            if(conn.isClosed()) {
+            if (conn.isClosed()) {
                 System.out.println("! conn is closed " + conn.stats());
 
                 socket.close();

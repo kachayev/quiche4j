@@ -1,18 +1,65 @@
 package io.quiche4j;
 
-// xxx(okachaiev): move to "Packet" as a subclass
+/**
+ * A QUIC packet's header.
+ */
 public final class PacketHeader {
 
+    /**
+     * The type of the packet.    
+     */
     private PacketType packetType;
+
+    /**
+     * The version of the packet.
+     */
     private int version;
+
+    /**
+     * The destination connection ID of the packet.    
+     */
     private byte[] dcid;
+
+    /**
+     * The source connection ID of the packet.
+     */
     private byte[] scid;
+
+    /**
+     * The packet number. It's only meaningful after the header protection is
+     * removed.    
+     */
     private long packetNum;
+
+    /**
+     * The length of the packet number. It's only meaningful after the header
+     * protection is removed.
+     */
     private int packetNumLen;
+
+    /**
+     * The address verification token of the packet. Only present in {@link PacketType.Initial}
+     * and {@link PacketType.Retry} packets.
+     */
     private byte[] token;
+
+    /**
+     * The list of versions in the packet. Only present in
+     * {@link PacketType.VersionNegotiation} packets.
+     */
     private int[] versions;
+
+    /**
+     * The key phase bit of the packet. It's only meaningful after the header
+     * protection is removed.
+     */
     private boolean keyPhase;
 
+    /**
+     * Create a packet struct with default member values.
+     *
+     * <p>The constructure could be called only from {@link PacketHeader#parse} method.
+     */
     private PacketHeader() {
         this.packetNum = 0L;
         this.packetNumLen = 0;
@@ -46,8 +93,7 @@ public final class PacketHeader {
         }
     }
 
-    // xxx(okachaiev): avoid get* prefix for getters? :thinking: 
-    public final PacketType getPacketType() {
+    public final PacketType packetType() {
         return this.packetType;
     }
 
@@ -55,25 +101,23 @@ public final class PacketHeader {
         this.version = version;
     }
 
-    public final int getVersion() {
+    public final int version() {
         return this.version;
     }
 
-    // xxx(okachaiev): rename as getter
-    protected final void setDcid(byte[] dcid) {
+    protected final void setDestinationConnectionId(byte[] dcid) {
         this.dcid = dcid;
     }
 
-    public final byte[] getDestinationConnectionId() {
+    public final byte[] destinationConnectionId() {
         return this.dcid;
     }
 
-    // xxx(okachaiev): rename as getter
-    protected final void setScid(byte[] scid) {
+    protected final void setSourceConnectionId(byte[] scid) {
         this.scid = scid;
     }
 
-    public final byte[] getSourceConnectionId() {
+    public final byte[] sourceConnectionId() {
         return this.scid;
     }
 
@@ -81,7 +125,7 @@ public final class PacketHeader {
         this.packetNum = packetNum;
     }
 
-    public final long getPacketNum() {
+    public final long packetNum() {
         return this.packetNum;
     }
 
@@ -89,7 +133,7 @@ public final class PacketHeader {
         this.packetNumLen = packetNumLen;
     }
 
-    public final int getPacketNumLen() {
+    public final int packetNumLen() {
         return this.packetNumLen;
     }
 
@@ -97,7 +141,7 @@ public final class PacketHeader {
         this.token = token.length > 0 ? token : null;
     }
 
-    public final byte[] getToken() {
+    public final byte[] token() {
         return this.token;
     }
 
@@ -105,7 +149,7 @@ public final class PacketHeader {
         this.versions = versions;
     }
 
-    public final int[] getVersions() {
+    public final int[] versions() {
         return this.versions;
     }
 
@@ -113,10 +157,26 @@ public final class PacketHeader {
         this.keyPhase = keyPhase;
     }
 
-    public final boolean getKeyPhase() {
+    public final boolean keyPhase() {
         return this.keyPhase;
     }
 
+    /**
+     * Parses a QUIC packet header from the given buffer.
+     * 
+     * <p>The {@code dcidLength} parameter is the length of the destination connection ID,
+     * required to parse short header packets.
+     * 
+     * <p>Example:
+     * <pre>
+     *     final byte[] buf = new byte[512];
+     *     final DatagramSocket socket = new DatagramSocket(0);
+     *     final DatagramPacket packet = new DatagramPacket(buf, buf.length);
+     *     final byte[] header = Arrays.copyOfRange(
+     *         packet.getData(), packet.getOffset(), packet.getLength());
+     *     final PacketHeader hdr = PacketHeader::parse(header, 16)
+     * </pre>
+     */
     public final static PacketHeader parse(byte[] buf, int dcidLength) {
         final PacketHeader hdr = new PacketHeader();
         Native.quiche_header_from_slice(buf, dcidLength, hdr);
