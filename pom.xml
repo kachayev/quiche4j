@@ -24,7 +24,6 @@
     <module>quiche4j-jni</module>
     <module>quiche4j-core</module>
     <module>quiche4j-examples</module>
-    <module>quiche4j-netty</module>
   </modules>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
