@@ -5,6 +5,8 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -356,9 +358,23 @@ public class Http3NettyClient {
     }
 
     public static void main(String[] args) throws IOException {
+        if (0 == args.length) {
+            System.out.println("Usage: ./http3-netty-client.sh <URL>");
+            System.exit(1);
+        }
 
-        final String hostname = "quic.tech";
-        final InetSocketAddress address = new InetSocketAddress(hostname, 8443);
+        final String url = args[0];
+        final URI uri;
+        try {
+            uri = new URI(url);
+        } catch (URISyntaxException e) {
+            System.out.println("Failed to parse URL " + url);
+            System.exit(1);
+            return;
+        }
+
+        final InetSocketAddress address = new InetSocketAddress(uri.getHost(), uri.getPort());
+
         final EventLoopGroup workerGroup = new NioEventLoopGroup();
         final Config config = new ConfigBuilder(Quiche.PROTOCOL_VERSION)
             .withApplicationProtos(Http3.APPLICATION_PROTOCOL)
@@ -378,7 +394,7 @@ public class Http3NettyClient {
         final Http3Config http3config = new Http3ConfigBuilder().build();
 
         final Http3ClientInitializer initializer =
-            new Http3ClientInitializer(address, hostname, config, http3config);
+            new Http3ClientInitializer(address, uri.getHost(), config, http3config);
 
         try {
             final Bootstrap b = new Bootstrap();
@@ -392,8 +408,8 @@ public class Http3NettyClient {
             // connection is now ready
             System.out.println("Connection was succesfully established");
 
-            final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/", Unpooled.EMPTY_BUFFER);
-            request.headers().add(HttpHeaderNames.HOST, "quic.tech");
+            final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, uri.getPath(), Unpooled.EMPTY_BUFFER);
+            request.headers().add(HttpHeaderNames.HOST, uri.getHost());
             request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
 
             long streamId = initializer.httpHandler().sendRequest(request);

@@ -15,13 +15,13 @@ Maven:
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-core</artifactId>
-        <version>0.2.4</version>
+        <version>0.2.5</version>
     </dependency>
     <dependency>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>linux_x64_86</classifier>
-        <version>0.2.4</version>
+        <version>0.2.5</version>
     </dependency>
 </dependencies>
 ```
@@ -43,7 +43,7 @@ Note that `quiche4j-jni` contains native library and should be installed with pr
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j-jni</artifactId>
         <classifier>${os.detected.classifier}</classifier>
-        <version>0.2.4</version>
+        <version>0.2.5</version>
     </dependency>
 </dependencies>
 ```
@@ -305,11 +305,29 @@ Note that `poll` would either execute callbacks and returns immediately. If ther
 
 Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche4j/examples/) folder for more complete examples on how to use the Quiche4j API to work with HTTP/3 protocol.
 
+Examples package has [`Http3NettyClient`](quiche4j-examples/src/main/java/io/quiche4j/examples/Http3NettyClient.java) with a toy implementation of HTTP/3 client to show case the idea of how `quiche4j` connection state management could be integrated with [Netty](https://netty.io/) I/O primitives.
+
 ### Errors Hanlding
 
 Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic). See [`Quiche.ErrorCode`](src/main/java/io/quiche4j/Quiche.java) and [`Http3.ErrorCode`](src/main/java/io/quiche4j/http3/Http3.java) for more details.
 
 Unlike other methods, `Quiche.connect` and `Quiche.accept` throw `ConnectionFailureException` if JNI code failed before `quiche::Connection` struct had been allocated. In this case there's no pointer to carry around, thus Java code does not create `Connection` object.
+
+## Debug
+
+Use `QUICHEJ4_JNI_LOG` environment variable to tweak JNI log level. Setting variable to `trace` gives good visibility into the processing. Example
+
+```bash
+$ QUICHE4J_JNI_LOG=trace ./http3-client.sh https://quic.tech:8443
+...
+[2020-09-27T20:49:39Z TRACE quiche] 3457285232348874d2bda1ed5add4a0c894dc9f2 rx pkt Handshake version=ff00001d dcid=3457285232348874d2bda1ed5add4a0c894dc9f2 scid=1b48925e8fcf6281be7f5ca472dd44b71a2f2fc1 len=731 pn=2
+[2020-09-27T20:49:39Z TRACE quiche] 3457285232348874d2bda1ed5add4a0c894dc9f2 rx frm CRYPTO off=2252 len=709
+[2020-09-27T20:49:39Z TRACE quiche::tls] 3457285232348874d2bda1ed5add4a0c894dc9f2 write message lvl=Handshake len=36
+[2020-09-27T20:49:39Z TRACE quiche::tls] 3457285232348874d2bda1ed5add4a0c894dc9f2 set write secret lvl=OneRTT
+[2020-09-27T20:49:39Z TRACE quiche::tls] 3457285232348874d2bda1ed5add4a0c894dc9f2 set read secret lvl=OneRTT
+[2020-09-27T20:49:39Z TRACE quiche] 3457285232348874d2bda1ed5add4a0c894dc9f2 connection established: proto=Ok("h3-29") cipher=Some(AES128_GCM) curve=Some("X25519") sigalg=Some("rsa_pss_rsae_sha256") resumed=false TransportParams { original_destination_connection_id: Some([121, 203, 4, 8, 44, 253, 150, 111, 224, 200, 201, 105, 201, 162, 250, 160]), max_idle_timeout: 30000, stateless_reset_token: None, max_udp_payload_size: 1350, initial_max_data: 10000000, initial_max_stream_data_bidi_local: 1000000, initial_max_stream_data_bidi_remote: 1000000, initial_max_stream_data_uni: 1000000, initial_max_streams_bidi: 100, initial_max_streams_uni: 100, ack_delay_exponent: 3, max_ack_delay: 25, disable_active_migration: true, active_conn_id_limit: 2, initial_source_connection_id: Some([27, 72, 146, 94, 143, 207, 98, 129, 190, 127, 92, 164, 114, 221, 68, 183, 26, 47, 47, 193]), retry_source_connection_id: None }
+...
+```
 
 ## Implementation Details
 
