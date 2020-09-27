@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j</artifactId>
-        <version>0.2.3</version>
+        <version>0.2.4</version>
     </parent>
     <artifactId>quiche4j-examples</artifactId>
     <name>Quiche4j/Examples</name>
@@ -14,6 +14,11 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>quiche4j-core</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.52.Final</version>
         </dependency>
     </dependencies>
     <properties>
