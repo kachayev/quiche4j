@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.quiche4j</groupId>
         <artifactId>quiche4j</artifactId>
-        <version>0.2.3</version>
+        <version>0.2.4</version>
     </parent>
     <artifactId>quiche4j-examples</artifactId>
     <name>Quiche4j/Examples</name>
