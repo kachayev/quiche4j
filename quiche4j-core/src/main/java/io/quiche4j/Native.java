@@ -29,7 +29,7 @@ public final class Native {
 		return CLEANER.register(obj, action);
 	}
 
-	private final static native int quiche_init_logger();
+	private final static native void quiche_init_logger();
 
 	// CONFIG
 	
