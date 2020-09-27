@@ -305,6 +305,8 @@ Note that `poll` would either execute callbacks and returns immediately. If ther
 
 Have a look at the [quiche4j-examples](quiche4j-examples/src/main/java/io/quiche4j/examples/) folder for more complete examples on how to use the Quiche4j API to work with HTTP/3 protocol.
 
+Examples package has [`Http3NettyClient`](quiche4j-examples/src/main/java/io/quiche4j/examples/Http3NettyClient.java) with a toy implementation of HTTP/3 client to show case the idea of how `quiche4j` connection state management could be integrated with [Netty](https://netty.io/) I/O primitives.
+
 ### Errors Hanlding
 
 Native JNI code propagates errors using return codes (typically the return code < 0 means either DONE or failed). For example, [`quiche::Error`](https://github.com/cloudflare/quiche/blob/204d693bb543e12a605073181ae605eacb743039/src/lib.rs#L320-L365) enum. `Quiche4j` follows the same convention instead of throwing Java exceptions to ensure good perfomance and compatibility with async runtimes (catching exception in async environemnt might be somewhat problematic). See [`Quiche.ErrorCode`](src/main/java/io/quiche4j/Quiche.java) and [`Http3.ErrorCode`](src/main/java/io/quiche4j/http3/Http3.java) for more details.
