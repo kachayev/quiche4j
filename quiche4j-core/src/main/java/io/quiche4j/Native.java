@@ -19,6 +19,8 @@ public final class Native {
 		} catch (java.lang.UnsatisfiedLinkError e) {
 			NativeUtils.loadEmbeddedLibrary(LIBRARY_NAME);
 		}
+
+		quiche_init_logger();
 	}
 
 	protected final static Cleaner CLEANER = Cleaner.create(); 
@@ -27,8 +29,10 @@ public final class Native {
 		return CLEANER.register(obj, action);
 	}
 
-	// CONFIG
+	private final static native int quiche_init_logger();
 
+	// CONFIG
+	
 	public final static native long quiche_config_new(int version);
 
 	public final static native void quiche_config_load_cert_chain_from_pem_file(long config_prt, String path);

@@ -210,7 +210,6 @@ public class Http3NettyClient {
 
         private void writeOutbound(ChannelHandlerContext ctx) {
             int len;
-            int total = 0;
             final byte[] buf = new byte[MAX_DATAGRAM_SIZE];
             while(true) {
                 len = connection.send(buf);
@@ -218,20 +217,16 @@ public class Http3NettyClient {
                     break;
                 }
                 System.out.println("WRITE HTTP3 PACKET " + len);
-                total += len;
                 final ByteBuf buffer = ctx.alloc().buffer(len);
                 buffer.writeBytes(buf, 0, len);
                 ctx.write(buf);
-            }
-
-            if (total > 0) {
-                ctx.flush();
             }
         }
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
             this.writeOutbound(ctx);
+            ctx.flush();
         }
 
         @Override
