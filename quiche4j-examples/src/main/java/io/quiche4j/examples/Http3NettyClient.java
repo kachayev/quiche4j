@@ -7,25 +7,24 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -64,15 +63,16 @@ public class Http3NettyClient {
 
         @Override
         public void encode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-            System.out.println("WRITE PACKET " + in.readableBytes() + " bytes; " + this.recipient);
-            out.add(new DatagramPacket(in.retain(), this.recipient, null));
+            out.add(new DatagramPacket(in.retain(), this.recipient));
         }
     }
 
+    public final static DatagramDecoder DATAGRAM_DECODER_INSTANCE = new DatagramDecoder();
+
+    @Sharable
     public final static class DatagramDecoder extends MessageToMessageDecoder<DatagramPacket> {
         @Override
         protected void decode(ChannelHandlerContext ctx, DatagramPacket msg, List<Object> out) {
-            System.out.println("GOT PACKET " + msg.content().readableBytes());
             out.add(msg.content().retain());
         }
     }
@@ -104,6 +104,7 @@ public class Http3NettyClient {
             if (len < 0 && len != Quiche.ErrorCode.DONE) {
                 this.handshakePromise.setFailure(HANDSHAKE_FAILURE);
                 ctx.pipeline().remove(this);
+                ctx.channel().close();
             } else {
                 final ByteBuf buf = ctx.alloc().buffer(len);
                 buf.writeBytes(buffer, 0, len);
@@ -114,19 +115,22 @@ public class Http3NettyClient {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            System.out.println("READ PACKET");
             final ByteBuf buffer = (ByteBuf) msg;
-            final byte[] buf = new byte[buffer.readableBytes()];
-            buffer.readBytes(buf);
-            final int read = this.connection.recv(buf);
-            System.out.println("READ PACKET " + read);
-            if (this.connection.isClosed()) {
-                this.handshakePromise.setFailure(HANDSHAKE_FAILURE);
-                ctx.pipeline().remove(this);
-            } else if (this.connection.isEstablished()) {
-                this.handshakePromise.setSuccess();
-                ctx.pipeline().remove(this);
-                ctx.fireUserEventTriggered(HANDSHAKE_DONE);
+            try {
+                final byte[] buf = new byte[buffer.readableBytes()];
+                buffer.readBytes(buf);
+                this.connection.recv(buf);
+                if (this.connection.isClosed()) {
+                    this.handshakePromise.setFailure(HANDSHAKE_FAILURE);
+                    ctx.pipeline().remove(this);
+                    ctx.channel().close();
+                } else if (this.connection.isEstablished()) {
+                    this.handshakePromise.setSuccess();
+                    ctx.pipeline().remove(this);
+                    ctx.fireUserEventTriggered(HANDSHAKE_DONE);
+                }
+            } finally {
+                buffer.release();
             }
         }
     }
@@ -135,7 +139,7 @@ public class Http3NettyClient {
 
         private final Connection connection;
         private final Http3Config config;
-        private final Map<Long, Entry<ChannelFuture, ChannelPromise>> streamResponseMap;
+        private final Map<Long, ChannelPromise> streamResponseMap;
         private final AtomicLong lastStreamId;
 
         ChannelHandlerContext context;
@@ -150,7 +154,8 @@ public class Http3NettyClient {
         }
 
         @Override
-        public void handlerAdded(ChannelHandlerContext ctx) {
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            super.handlerAdded(ctx);
             this.context = ctx;
         }
 
@@ -161,6 +166,7 @@ public class Http3NettyClient {
                 final Http3Connection h3c = http3Connection;
                 this.listener = new Http3EventListener() {
                     public void onHeaders(long streamId, List<Http3Header> headers, boolean hasBody) {
+                        System.out.println("< got headers for " + streamId);
                         headers.forEach(header -> {
                             System.out.println(header.name() + ": " + header.value());
                         });
@@ -180,9 +186,9 @@ public class Http3NettyClient {
                     public void onFinished(long streamId) {
                         System.out.println("> response finished");
 
-                        Entry<ChannelFuture, ChannelPromise> entry = streamResponseMap.get(streamId);
-                        if (null != entry) {
-                            entry.getValue().setSuccess();
+                        ChannelPromise promise = streamResponseMap.get(streamId);
+                        if (null != promise) {
+                            promise.setSuccess();
                         }
                     }
                 };
@@ -191,6 +197,8 @@ public class Http3NettyClient {
             }
         }
 
+        // xxx(okachaiev): proper handling of write promise would be quite an
+        // interesting challenge...
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             final FullHttpRequest request = (FullHttpRequest) msg;
@@ -216,10 +224,9 @@ public class Http3NettyClient {
                 if (len < 0) {
                     break;
                 }
-                System.out.println("WRITE HTTP3 PACKET " + len);
                 final ByteBuf buffer = ctx.alloc().buffer(len);
                 buffer.writeBytes(buf, 0, len);
-                ctx.write(buf);
+                ctx.write(buffer);
             }
         }
 
@@ -237,16 +244,24 @@ public class Http3NettyClient {
                     final byte[] buf = new byte[content.readableBytes()];
                     content.readBytes(buf);
                     final int read = this.connection.recv(buf);
-                    System.out.println("READ HTTP3 RECV " + read);
                     if (read > 0) {
-                        if(http3Connection.poll(this.listener) < 0) {
-                            this.writeOutbound(ctx);
+                        while(true) {
+                            final long streamId = http3Connection.poll(this.listener);
+                            if (streamId < 0) break;
                         }
+                        this.writeOutbound(ctx);
                     }
                 }
             } finally {
                 content.release();
             }
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            super.channelReadComplete(ctx);
+            this.writeOutbound(ctx);
+            ctx.flush();
 
             if (connection.isClosed()) {
                 ctx.channel().close();
@@ -255,10 +270,19 @@ public class Http3NettyClient {
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            super.close(ctx, promise);
+            if (!connection.isClosed()) {
+                this.connection.close(true, 0x00, "kthxbye");
+                this.writeOutbound(ctx);
+                ctx.flush();
+            }
+
+            System.out.println(this.connection.stats());
+
             streamResponseMap.values().stream().forEach(entry -> {
-                entry.getValue().setFailure(new ClosedChannelException());
+                entry.setFailure(new ClosedChannelException());
             });
+
+            ctx.close(promise);
         }
 
         private long nextStreamId() {
@@ -267,31 +291,26 @@ public class Http3NettyClient {
 
         public long sendRequest(FullHttpRequest request) {
             final long streamId = nextStreamId();
-            final ChannelFuture writeFuture = this.context.channel().writeAndFlush(request);
-            streamResponseMap.put(streamId, new SimpleEntry<>(writeFuture, this.context.newPromise()));
+            // xxx(okachaiev): to avoid this weird .channe().write() mechanic
+            // we need to make sure that user-facing API works on a separate
+            // handler (which is setup after Http3 codec layer)
+            this.context.channel().writeAndFlush(request);
+            streamResponseMap.put(streamId, this.context.newPromise());
             return streamId;
         }
 
         public void awaitStreamResponse(long streamId, long timeout, TimeUnit unit) {
-            Entry<ChannelFuture, ChannelPromise> entry = streamResponseMap.get(streamId);
-            if (null == entry) {
+            ChannelPromise promise = streamResponseMap.get(streamId);
+            if (null == promise) {
                 throw new IllegalStateException("Write operation never happened?");
             }
 
-            if (!entry.getKey().awaitUninterruptibly(timeout, unit)) {
-                throw new IllegalStateException("Waiting on write failed");
-            }
-
-            if (!entry.getKey().isSuccess()) {
-                throw new RuntimeException(entry.getKey().cause());
-            }
-
-            if (!entry.getValue().awaitUninterruptibly(timeout, unit)) {
+            if (!promise.awaitUninterruptibly(timeout, unit)) {
                 throw new IllegalStateException("Waiting on reponse failed");
             }
 
-            if (!entry.getValue().isSuccess()) {
-                throw new RuntimeException(entry.getValue().cause());
+            if (!promise.isSuccess()) {
+                throw new RuntimeException(promise.cause());
             }
 
             streamResponseMap.remove(streamId);
@@ -322,7 +341,7 @@ public class Http3NettyClient {
 
             ch.pipeline().addLast(
                 new DatagramEncoder(recipient),
-                new DatagramDecoder(),
+                DATAGRAM_DECODER_INSTANCE,
                 this.handshaker,
                 httpHandler);
         }
@@ -367,7 +386,7 @@ public class Http3NettyClient {
             b.channel(NioDatagramChannel.class);
             b.handler(initializer);
     
-            b.bind(0).syncUninterruptibly();
+            final Channel ch = b.bind(0).syncUninterruptibly().channel();
             initializer.handshaker().startHandshake().syncUninterruptibly();
 
             // connection is now ready
@@ -378,7 +397,11 @@ public class Http3NettyClient {
             request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
 
             long streamId = initializer.httpHandler().sendRequest(request);
+
+            System.out.println("Waiting on stream " + streamId);
+
             initializer.httpHandler().awaitStreamResponse(streamId, 10, TimeUnit.SECONDS);
+            ch.close();
         } finally {
             workerGroup.shutdownGracefully();
         }
