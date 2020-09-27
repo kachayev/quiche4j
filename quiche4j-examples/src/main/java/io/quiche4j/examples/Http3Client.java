@@ -103,7 +103,7 @@ public class Http3Client {
 
                     System.out.println("> socket.recieve " + recvBytes + " bytes");
 
-                    // xxx(okachaiev): if we extend `recv` API to with optional buf len,
+                    // xxx(okachaiev): if we extend `recv` API to deal with optional buf len,
                     // we could avoid Arrays.copy here
                     final int read = conn.recv(Arrays.copyOfRange(packet.getData(), packet.getOffset(), recvBytes));
                     if (read < 0 && read != Quiche.ErrorCode.DONE) {

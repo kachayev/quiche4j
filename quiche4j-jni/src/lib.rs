@@ -6,6 +6,7 @@ use jni::JNIEnv;
 use quiche::{h3, Config, Connection, Error, Header, StreamIter, Type};
 use std::pin::Pin;
 use std::slice;
+use env_logger;
 
 type JNIResult<T> = Result<T, jni::errors::Error>;
 
@@ -27,6 +28,15 @@ fn h3_error_code(error: h3::Error) -> i32 {
         h3::Error::QpackDecompressionFailed => -11,
         h3::Error::TransportError { .. } => -12,
         h3::Error::StreamBlocked => -13,
+    }
+}
+
+#[no_mangle]
+#[warn(unused_variables)]
+pub extern "system" fn Java_io_quiche4j_Native_quiche_1init_1logger() -> jint {
+    match env_logger::try_init() {
+        Ok(()) => 0 as jint,
+        Err(_) => -1 as jint
     }
 }
 
