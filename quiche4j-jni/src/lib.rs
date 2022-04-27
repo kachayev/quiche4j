@@ -819,11 +819,12 @@ pub extern "system" fn Java_io_quiche4j_http3_Http3Native_quiche_1h3_1send_1requ
     h3_ptr: jlong,
     conn_ptr: jlong,
     headers: jobjectArray,
+    fin: jboolean,
 ) {
     let h3_conn = unsafe { &mut *(h3_ptr as *mut h3::Connection) };
     let mut conn = unsafe { &mut *(conn_ptr as *mut Connection) };
     let req = headers_from_java(&env, headers).unwrap();
-    h3_conn.send_request(&mut conn, &req, true).unwrap();
+    h3_conn.send_request(&mut conn, &req, fin != 0).unwrap();
 }
 
 #[no_mangle]

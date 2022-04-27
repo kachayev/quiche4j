@@ -39,8 +39,8 @@ public final class Http3Connection {
     /**
      * @see sendRequest(Http3Header[], boolean)
      */
-    public final void sendRequest(List<Http3Header> headers, boolean fin) {
-        sendRequest(headers.toArray(new Http3Header[0]), fin);
+    public final long sendRequest(List<Http3Header> headers, boolean fin) {
+        return sendRequest(headers.toArray(new Http3Header[0]), fin);
     }
 
     /**
@@ -58,8 +58,8 @@ public final class Http3Connection {
      * happens the application should retry the operation once the stream is reported
      * as writable again.
      */
-    public final void sendRequest(Http3Header[] headers, boolean fin) {
-        Http3Native.quiche_h3_send_request(getPointer(), conn.getPointer(), headers, fin);
+    public final long sendRequest(Http3Header[] headers, boolean fin) {
+        return Http3Native.quiche_h3_send_request(getPointer(), conn.getPointer(), headers, fin);
     }
 
     /**
