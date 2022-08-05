@@ -321,11 +321,15 @@ public final class ConfigBuilder {
         });
 
         if (null != certChainPath) {
-            Native.quiche_config_load_cert_chain_from_pem_file(pointer, certChainPath);
+            if(Native.quiche_config_load_cert_chain_from_pem_file(pointer, certChainPath) != 0) {
+                throw new SecurityException("Cannot load certChain: " + certChainPath);
+            }
         }
 
         if (null != privKeyPath) {
-            Native.quiche_config_load_priv_key_from_pem_file(pointer, privKeyPath);
+            if(Native.quiche_config_load_priv_key_from_pem_file(pointer, privKeyPath) != 0) {
+                throw new SecurityException("Cannot load privKey: " + privKeyPath);
+            }
         }
 
         if (null != verifyPeer) {

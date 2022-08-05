@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 jni = "0.17.0"
-quiche = "0.5.1"
+quiche = "0.14.0"
 env_logger = "0.7.1"
 
 [lib]

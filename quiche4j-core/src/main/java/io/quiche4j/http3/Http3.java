@@ -8,10 +8,15 @@ public final class Http3 {
      * <p>This can be passed directly to the {@link ConfigBuilder#withApplicationProtos}
      * method when implementing HTTP/3 applications.
      */
-    public static final byte[] APPLICATION_PROTOCOL = "\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();
+    public static final byte[] APPLICATION_PROTOCOL = "\u0002h3\u0005h3-29\u0005h3-28\u0005h3-27".getBytes();
 
     /**
      * A listing of HTTP3 error codes.
+     *
+     *  [NOTICE]
+     *    TRANSPORT_ERROR has two states in error code. Upper byte is error code on transport (defined in Quiche.ErrorCode),
+     *    and lower byte is HTTP3 error code. So you must divide it into two error codes by h3Error() and quicheError()
+     *    static methods.
      */
     public static final class ErrorCode {
         /**
@@ -83,6 +88,23 @@ public final class Http3 {
          * for the operation to complete. The application should retry later on.
          */
         public static final short STREAM_BLOCKED = -13;
+
+        public static final short SETTINGS_ERROR = -14;
+        public static final short REQUEST_REJECTED = -15;
+        public static final short REQUEST_CANCELED = -16;
+        public static final short REQUEST_INCOMPLETE = -17;
+        public static final short MESSAGE_ERROR = -18;
+        public static final short CONNECT_ERROR = -19;
+        public static final short VERSION_FALLBACK = -20;
+
+
+        public static short h3Error(short code) {
+            return (byte)(code & 0xff);
+        }
+
+        public static short quicheError(short code) {
+            return (byte)((code & 0xff00) >> 8);
+        }
     }
 
 }
