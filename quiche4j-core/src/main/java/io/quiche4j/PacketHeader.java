@@ -177,10 +177,16 @@ public final class PacketHeader {
      *     final PacketHeader hdr = PacketHeader::parse(header, 16)
      * </pre>
      */
-    public final static PacketHeader parse(byte[] buf, int dcidLength) {
+    public final static PacketHeader parse(byte[] buf, int dcidLength, int errorCode[]) {
         final PacketHeader hdr = new PacketHeader();
-        Native.quiche_header_from_slice(buf, dcidLength, hdr);
-        return hdr;
+        int err = Native.quiche_header_from_slice(buf, dcidLength, hdr);
+        if(err < 0) {
+            if(errorCode != null && errorCode.length > 0)
+                errorCode[0] = err;
+            return null;
+        }
+        else
+            return hdr;
     }
 
     public final String toString() {

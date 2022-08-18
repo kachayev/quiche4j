@@ -1,5 +1,7 @@
 package io.quiche4j;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -95,14 +97,30 @@ public final class Quiche {
         public static final short STREAM_LIMIT = -12;
 
         /**
+         * The specified stream was stopped by the peer.
+         *
+         * The error code sent as part of the `STOP_SENDING` frame is provided as
+         * associated data.
+         */
+        public static final short STREAM_STOPPED = -13;
+
+        /**
+         * The specified stream was reset by the peer.
+         *
+         * The error code sent as part of the `RESET_STREAM` frame is provided as
+         * associated data.
+         */
+        public static final short STREAM_RESET = -14;
+
+        /**
          * The received data exceeds the stream's final size.
          */
-        public static final short FINAL_SIZE = -13;
+        public static final short FINAL_SIZE = -15;
 
         /**
          * Error in congestion control.
          */
-        public static final short CONGESTION_CONTROL = -14;
+        public static final short CONGESTION_CONTROL = -16;
     }
 
     /**
@@ -255,9 +273,9 @@ public final class Quiche {
      * 
      * @throws ConnectionFailureException
      */
-    public static final Connection accept(byte[] sourceConnId, byte[] originalDestinationConnId, Config config)
+    public static final Connection accept(byte[] sourceConnId, byte[] originalDestinationConnId, InetSocketAddress fromAddr, Config config)
             throws ConnectionFailureException {
-        final long ptr = Native.quiche_accept(sourceConnId, originalDestinationConnId, config.getPointer());
+        final long ptr = Native.quiche_accept(sourceConnId, originalDestinationConnId, fromAddr.getAddress().getAddress(), fromAddr.getPort(), config.getPointer());
         if (ptr <= ErrorCode.SUCCESS) {
             throw new ConnectionFailureException(ptr);
         }
@@ -273,9 +291,9 @@ public final class Quiche {
      * 
      * @throws ConnectionFailureException
      */
-    public static final Connection connect(String serverName, byte[] connId, Config config)
+    public static final Connection connect(String serverName, byte[] connId, InetSocketAddress addr, Config config)
             throws ConnectionFailureException {
-        final long ptr = Native.quiche_connect(serverName, connId, config.getPointer());
+        final long ptr = Native.quiche_connect(serverName, connId, addr.getAddress().getAddress(), addr.getPort(), config.getPointer());
         if (ptr <= ErrorCode.SUCCESS) {
             throw new ConnectionFailureException(ptr);
         }

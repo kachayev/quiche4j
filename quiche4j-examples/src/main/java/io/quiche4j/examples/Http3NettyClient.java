@@ -85,10 +85,12 @@ public class Http3NettyClient {
         ChannelHandlerContext ctx;
         final Connection connection;
         final ChannelPromise handshakePromise;
+        final InetSocketAddress remoteAddress;
 
-        QuicHandshakeHandler(Connection connection, ChannelPromise handshakePromise) {
+        QuicHandshakeHandler(Connection connection, ChannelPromise handshakePromise, InetSocketAddress remoteAddress) {
             this.connection = connection;
             this.handshakePromise = handshakePromise;
+            this.remoteAddress = remoteAddress;
         }
 
         @Override
@@ -121,7 +123,7 @@ public class Http3NettyClient {
             try {
                 final byte[] buf = new byte[buffer.readableBytes()];
                 buffer.readBytes(buf);
-                this.connection.recv(buf);
+                this.connection.recv(buf, this.remoteAddress);
                 if (this.connection.isClosed()) {
                     this.handshakePromise.setFailure(HANDSHAKE_FAILURE);
                     ctx.pipeline().remove(this);
@@ -143,16 +145,18 @@ public class Http3NettyClient {
         private final Http3Config config;
         private final Map<Long, ChannelPromise> streamResponseMap;
         private final AtomicLong lastStreamId;
+        private final InetSocketAddress remoteAddress;
 
         ChannelHandlerContext context;
         Http3Connection http3Connection;
         Http3EventListener listener;
 
-        HttpOverQuicHandler(Connection connection, Http3Config config) {
+        HttpOverQuicHandler(Connection connection, Http3Config config, InetSocketAddress remoteAddress) {
             this.connection = connection;
             this.config = config;
             this.streamResponseMap = PlatformDependent.newConcurrentHashMap();
             this.lastStreamId = new AtomicLong(0);
+            this.remoteAddress = remoteAddress;
         }
 
         @Override
@@ -245,7 +249,7 @@ public class Http3NettyClient {
                 if (content.readableBytes() > 0) {
                     final byte[] buf = new byte[content.readableBytes()];
                     content.readBytes(buf);
-                    final int read = this.connection.recv(buf);
+                    final int read = this.connection.recv(buf, this.remoteAddress);
                     if (read > 0) {
                         while(true) {
                             final long streamId = http3Connection.poll(this.listener);
@@ -337,9 +341,9 @@ public class Http3NettyClient {
         @Override
         protected void initChannel(DatagramChannel ch) throws ConnectionFailureException {
             final byte[] connId = Quiche.newConnectionId();
-            final Connection conn = Quiche.connect(this.domain, connId, this.config);
-            this.handshaker = new QuicHandshakeHandler(conn, ch.newPromise());
-            this.httpHandler = new HttpOverQuicHandler(conn, http3config);
+            final Connection conn = Quiche.connect(this.domain, connId, recipient, this.config);
+            this.handshaker = new QuicHandshakeHandler(conn, ch.newPromise(), ch.remoteAddress());
+            this.httpHandler = new HttpOverQuicHandler(conn, http3config, ch.remoteAddress());
 
             ch.pipeline().addLast(
                 new DatagramEncoder(recipient),

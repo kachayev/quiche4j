@@ -1,13 +1,7 @@
 package io.quiche4j.examples;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,11 +64,11 @@ public class Http3Client {
             .build();
 
         final byte[] connId = Quiche.newConnectionId();
-        final Connection conn = Quiche.connect(uri.getHost(), connId, config);
+        final Connection conn = Quiche.connect(uri.getHost(), connId, new InetSocketAddress(address, port), config);
 
         int len = 0;
         final byte[] buffer = new byte[MAX_DATAGRAM_SIZE];
-        len = conn.send(buffer);
+        len = conn.send(buffer, null);
         if (len < 0 && len != Quiche.ErrorCode.DONE) {
             System.out.println("! handshake init problem " + len);
             System.exit(1);
@@ -105,7 +99,7 @@ public class Http3Client {
 
                     // xxx(okachaiev): if we extend `recv` API to deal with optional buf len,
                     // we could avoid Arrays.copy here
-                    final int read = conn.recv(Arrays.copyOfRange(packet.getData(), packet.getOffset(), recvBytes));
+                    final int read = conn.recv(Arrays.copyOfRange(packet.getData(), packet.getOffset(), recvBytes), (InetSocketAddress) packet.getSocketAddress());
                     if (read < 0 && read != Quiche.ErrorCode.DONE) {
                         System.out.println("> conn.recv failed " + read);
 
@@ -130,7 +124,7 @@ public class Http3Client {
 
                         public void onData(long streamId) {
                             final int bodyLength = h3c.recvBody(streamId, buffer);
-                            if (bodyLength < 0 && bodyLength != Quiche.ErrorCode.DONE) {
+                            if (bodyLength < 0) {
                                 System.out.println("! recv body failed " + bodyLength);
                             } else {
                                 System.out.println("< got body " + bodyLength + " bytes for " + streamId);

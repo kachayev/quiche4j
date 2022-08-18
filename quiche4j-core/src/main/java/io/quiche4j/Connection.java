@@ -1,5 +1,9 @@
 package io.quiche4j;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.Iterator;
 
 import io.quiche4j.Quiche.Shutdown;
@@ -43,8 +47,8 @@ public class Connection {
      *     }
      * </pre>
      */
-    public final int recv(byte[] buf) {
-        return Native.quiche_conn_recv(getPointer(), buf);
+    public final int recv(byte[] buf, InetSocketAddress fromAddr) {
+        return Native.quiche_conn_recv(getPointer(), buf, fromAddr.getAddress().getAddress(), fromAddr.getPort());
     }
 
     /**
@@ -87,8 +91,33 @@ public class Connection {
      *     }
      * </pre>
      */
+    public final int send(byte[] buf, InetSocketAddress[] outAddr) {
+        byte[] v4Addr = new byte[4];
+        byte[] v6Addr = new byte[16];
+        int[] port = new int[1];
+        boolean[] isV4 = new boolean[1];
+        int ret = Native.quiche_conn_send(getPointer(), buf, v4Addr, v6Addr, port, isV4);
+        if(ret == -1 || outAddr == null)
+            return ret;
+        else {
+            try {
+                if (isV4[0]) {
+                    outAddr[0] = new InetSocketAddress(Inet4Address.getByAddress(v4Addr), port[0]);
+                }
+                else {
+                    outAddr[0] = new InetSocketAddress(Inet6Address.getByAddress(v6Addr), port[0]);
+                }
+                return ret;
+            }
+            catch(UnknownHostException e) {
+                e.printStackTrace();
+                return -1;
+            }
+        }
+    }
+
     public final int send(byte[] buf) {
-        return Native.quiche_conn_send(getPointer(), buf);
+        return send(buf, null);
     }
 
     /**

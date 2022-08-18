@@ -35,9 +35,9 @@ public final class Native {
 	
 	public final static native long quiche_config_new(int version);
 
-	public final static native void quiche_config_load_cert_chain_from_pem_file(long config_prt, String path);
+	public final static native int quiche_config_load_cert_chain_from_pem_file(long config_prt, String path);
 
-	public final static native void quiche_config_load_priv_key_from_pem_file(long config_ptr, String path);
+	public final static native int quiche_config_load_priv_key_from_pem_file(long config_ptr, String path);
 
 	public final static native void quiche_config_verify_peer(long config_ptr, boolean v);
 
@@ -79,9 +79,9 @@ public final class Native {
 
 	// CONNECTION
 
-	public final static native long quiche_accept(byte[] scid, byte[] odcid, long config_ptr);
+	public final static native long quiche_accept(byte[] scid, byte[] odcid, byte[] from_addr, int from_port, long config_ptr);
 
-	public final static native long quiche_connect(String server_name, byte[] scid, long config_ptr);
+	public final static native long quiche_connect(String server_name, byte[] scid, byte[] socket_adr, int port, long config_ptr);
 
 	public final static native int quiche_negotiate_version(byte[] scid, byte[] dcid, byte[] buf);
 
@@ -91,9 +91,9 @@ public final class Native {
 		byte[] sourceConnId, byte[] destinationConnId, byte[] newSourceConnId,
 		byte[] token, int version, byte[] buf);
 
-	public final static native int quiche_conn_recv(long conn_ptr, byte[] buf);
+	public final static native int quiche_conn_recv(long conn_ptr, byte[] buf, byte[] from_addr, int from_port);
 
-	public final static native int quiche_conn_send(long conn_ptr, byte[] buf);
+	public final static native int quiche_conn_send(long conn_ptr, byte[] buf, byte[] out_v4addr, byte[] out_v6adr, int[] out_port, boolean[] out_isv4);
 
 	public final static native int quiche_conn_close(long conn_ptr, boolean app, long err, byte[] reason);
 
@@ -135,5 +135,5 @@ public final class Native {
 
 	// PACKET
 
-	public final static native void quiche_header_from_slice(byte[] buf, int dcid_len, PacketHeader holder);
+	public final static native int quiche_header_from_slice(byte[] buf, int dcid_len, PacketHeader holder);
 }
