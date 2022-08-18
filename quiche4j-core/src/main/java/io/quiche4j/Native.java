@@ -135,5 +135,5 @@ public final class Native {
 
 	// PACKET
 
-	public final static native void quiche_header_from_slice(byte[] buf, int dcid_len, PacketHeader holder);
+	public final static native int quiche_header_from_slice(byte[] buf, int dcid_len, PacketHeader holder);
 }

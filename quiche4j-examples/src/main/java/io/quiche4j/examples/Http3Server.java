@@ -146,8 +146,11 @@ public class Http3Server {
                 // PARSE QUIC HEADER
                 final PacketHeader hdr;
                 try {
-                    hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN);
+                    int err[] = new int[1];
+                    hdr = PacketHeader.parse(packetBuf, Quiche.MAX_CONN_ID_LEN, err);
                     System.out.println("> packet " + hdr);
+                    if(hdr == null)
+                        throw new Exception("Parse failed: " + err[0]);
                 } catch (Exception e) {
                     System.out.println("! failed to parse headers " + e);
                     continue;

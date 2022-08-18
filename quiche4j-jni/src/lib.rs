@@ -1148,9 +1148,12 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1header_1from_1slice(
     java_buf: jbyteArray,
     dcid_len: jint,
     holder: jobject,
-) {
+) -> jint {
     let mut buf: Vec<u8> = env.convert_byte_array(java_buf).unwrap();
-    let hdr = Header::from_slice(&mut buf, dcid_len as usize).unwrap();
+    let hdr = match Header::from_slice(&mut buf, dcid_len as usize) {
+        Ok(v) => v,
+        Err(e) => return quiche_error_code(e),
+    };
     let ty_java = match hdr.ty {
         Type::Initial => 1,
         Type::Retry => 2,
@@ -1210,4 +1213,5 @@ pub extern "system" fn Java_io_quiche4j_Native_quiche_1header_1from_1slice(
         }
         None => {}
     }
+    return 0;
 }
